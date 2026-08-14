@@ -27,7 +27,7 @@ class PhotoController extends Controller
         TransactionService $transactionService,
     ): JsonResponse {
         $request->validate([
-            'image' => 'required|string',
+            'image' => 'required|string|max:10485760', // Max ~10MB base64 payload
         ]);
 
         $session = Session::where('session_code', $sessionCode)->firstOrFail();
@@ -38,14 +38,23 @@ class PhotoController extends Controller
             ->firstOrFail();
 
         // Decode base64 image
-        $imageData = $request->input('image');
-        $imageData = preg_replace('/^data:image\/\w+;base64,/', '', $imageData);
-        $imageData = base64_decode($imageData);
+        $rawInput = $request->input('image');
+        $cleanBase64 = preg_replace('/^data:image\/\w+;base64,/', '', $rawInput);
+        $imageData = base64_decode($cleanBase64, true);
 
-        if ($imageData === false) {
+        if ($imageData === false || empty($imageData)) {
             return response()->json([
                 'success' => false,
-                'error' => 'Invalid image data.',
+                'error' => 'Invalid or corrupt base64 image data.',
+            ], 422);
+        }
+
+        // Verify valid image binary header
+        $imageInfo = @getimagesizefromstring($imageData);
+        if ($imageInfo === false || !in_array($imageInfo[2], [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP])) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Uploaded payload is not a valid JPEG, PNG, or WebP image.',
             ], 422);
         }
 

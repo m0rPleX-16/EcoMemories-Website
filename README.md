@@ -8,6 +8,10 @@
 
 ---
 
+> 📖 **Comprehensive Documentation Suite**: Check out the [`docs/`](./docs/) directory for the [Project Overview & Roadmap](./docs/PROJECT_OVERVIEW.md), [Hardware & IoT Integration Guide](./docs/HARDWARE_INTEGRATION_GUIDE.md), and [Cloud Deployment Guide](./docs/DEPLOYMENT_GUIDE.md).
+
+---
+
 ## 1. Project Overview
 
 ### 1.1 Concept

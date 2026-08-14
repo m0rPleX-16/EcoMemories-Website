@@ -33,7 +33,18 @@ class DeviceEventController extends Controller
             'weight' => 'nullable|numeric|min:0',
         ]);
 
-        // 1. Authenticate device
+        // 1. Authenticate device and optional secret key
+        $configuredSecret = config('services.device_secret', env('DEVICE_SECRET'));
+        if ($configuredSecret) {
+            $providedSecret = $request->header('X-Device-Secret');
+            if (!$providedSecret || !hash_equals($configuredSecret, $providedSecret)) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Unauthorized device secret.',
+                ], 401);
+            }
+        }
+
         $device = Device::where('device_code', $validated['device_id'])
             ->where('status', Device::STATUS_ACTIVE)
             ->first();

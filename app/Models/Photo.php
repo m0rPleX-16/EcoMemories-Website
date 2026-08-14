@@ -25,14 +25,22 @@ class Photo extends Model
     }
 
     /**
-     * Generate a unique reference code like ECO-00124.
+     * Generate a cryptographically unguessable reference code like ECO-8M4K2P.
+     * Uses unambiguous characters (no 0/O, 1/I).
      */
     public static function generateReferenceCode(): string
     {
-        $latest = DB::table('photos')->max('id') ?? 0;
-        $next = $latest + 1;
+        $chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+        $length = 6;
 
-        return 'ECO-' . str_pad($next, 5, '0', STR_PAD_LEFT);
+        do {
+            $code = 'ECO-';
+            for ($i = 0; $i < $length; $i++) {
+                $code .= $chars[random_int(0, strlen($chars) - 1)];
+            }
+        } while (self::where('reference_code', $code)->exists());
+
+        return $code;
     }
 
     public function photoSession(): BelongsTo

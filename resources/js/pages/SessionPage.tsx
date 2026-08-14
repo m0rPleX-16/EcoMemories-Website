@@ -49,6 +49,27 @@ export default function SessionPage() {
         fetchSession();
     }, [fetchSession]);
 
+    // Kiosk safety: Auto-return to home after 3 minutes of inactivity
+    useEffect(() => {
+        let timeoutId: ReturnType<typeof setTimeout>;
+
+        const resetInactivityTimer = () => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                navigate('/', { replace: true });
+            }, 180000); // 3 minutes
+        };
+
+        const events = ['mousedown', 'mousemove', 'touchstart', 'keydown'];
+        events.forEach((ev) => window.addEventListener(ev, resetInactivityTimer, { passive: true }));
+        resetInactivityTimer();
+
+        return () => {
+            clearTimeout(timeoutId);
+            events.forEach((ev) => window.removeEventListener(ev, resetInactivityTimer));
+        };
+    }, [navigate]);
+
     const simulateDeposit = async () => {
         if (!sessionCode || depositing) return;
         setDepositing(true);
