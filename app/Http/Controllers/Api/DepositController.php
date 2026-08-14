@@ -31,7 +31,15 @@ class DepositController extends Controller
             ->where('status', Session::STATUS_ACTIVE)
             ->firstOrFail();
 
-        $device = Device::where('device_code', 'SIMULATOR-001')->firstOrFail();
+        $device = Device::firstOrCreate(
+            ['device_code' => 'SIMULATOR-001'],
+            [
+                'name' => 'Deposit Simulator',
+                'type' => 'trashcan',
+                'api_token' => 'sim-token-001',
+                'is_active' => true,
+            ]
+        );
 
         // Create deposit
         $deposit = $session->deposits()->create([
