@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import api from '@/lib/api';
 import type { Photo } from '@/types';
+import ImageLightboxModal from '@/components/ImageLightboxModal';
 import {
     Download,
     Printer,
@@ -12,9 +13,9 @@ import {
     Calendar,
     Sparkles,
     Trash2,
-    ShieldCheck,
     CheckCircle2,
     X,
+    ZoomIn,
 } from 'lucide-react';
 
 export default function PhotoPage() {
@@ -23,7 +24,8 @@ export default function PhotoPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
 
-    // Deletion states
+    // Lightbox & Deletion states
+    const [lightboxOpen, setLightboxOpen] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [deleted, setDeleted] = useState(false);
@@ -172,19 +174,36 @@ export default function PhotoPage() {
                 </p>
             </div>
 
-            {/* Photostrip Card Container */}
-            <div className="editorial-card p-3 sm:p-4 mb-6 sm:mb-8 shadow-md animate-scale-in max-w-xs sm:max-w-sm w-full flex justify-center">
-                <img
-                    src={imageUrl}
-                    alt={`EcoMemories Photostrip ${photo.reference_code}`}
-                    className="rounded-xl max-h-[480px] sm:max-h-[640px] w-auto object-contain border border-[#E8E3D5]"
-                />
+            {/* Photostrip Card Container with Click-to-Zoom */}
+            <div className="editorial-card p-3 sm:p-4 mb-6 sm:mb-8 shadow-md animate-scale-in max-w-xs sm:max-w-sm w-full flex flex-col items-center group">
+                <div
+                    onClick={() => setLightboxOpen(true)}
+                    className="relative cursor-zoom-in overflow-hidden rounded-lg w-full flex justify-center bg-[#FAF8F5] border border-[#E8E3D5] group-hover:border-[#0E3E2B] transition-colors"
+                >
+                    <img
+                        src={imageUrl}
+                        alt={`EcoMemories Photostrip ${photo.reference_code}`}
+                        className="max-h-[480px] sm:max-h-[640px] w-auto object-contain transition-transform duration-300 group-hover:scale-[1.02]"
+                    />
+
+                    {/* Floating Hover Badge */}
+                    <div className="absolute bottom-3 inset-x-3 flex items-center justify-center opacity-90 group-hover:opacity-100 transition-opacity">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0E3E2B]/85 backdrop-blur-xs text-white text-[10px] sm:text-[11px] font-mono tracking-wider uppercase font-semibold shadow-md">
+                            <ZoomIn className="w-3.5 h-3.5 text-[#D4AF37]" />
+                            <span>Click to Preview & Zoom</span>
+                        </span>
+                    </div>
+                </div>
             </div>
 
             {/* Actions */}
             <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-2.5 sm:gap-3 mb-6 sm:mb-8 animate-fade-in-up stagger-2 w-full max-w-md sm:max-w-none">
-                <button onClick={handleDownload} className="btn-primary text-sm px-6 py-3 w-full sm:w-auto">
-                    <Download className="w-4 h-4 text-[#D4AF37]" />
+                <button onClick={() => setLightboxOpen(true)} className="btn-primary text-sm px-6 py-3 w-full sm:w-auto">
+                    <ZoomIn className="w-4 h-4 text-[#D4AF37]" />
+                    <span>Preview & Zoom</span>
+                </button>
+                <button onClick={handleDownload} className="btn-secondary text-sm px-6 py-3 w-full sm:w-auto">
+                    <Download className="w-4 h-4 text-[#C5A059]" />
                     <span>Download High-Res</span>
                 </button>
                 <button onClick={handlePrint} className="btn-secondary text-sm px-6 py-3 w-full sm:w-auto">
@@ -215,6 +234,16 @@ export default function PhotoPage() {
                     Every recycled item counts • Turn waste into lasting memories
                 </p>
             </div>
+
+            {/* Lightbox Zoom Modal */}
+            <ImageLightboxModal
+                isOpen={lightboxOpen}
+                onClose={() => setLightboxOpen(false)}
+                imageSrc={imageUrl}
+                altText={`EcoMemories Photostrip ${photo.reference_code}`}
+                referenceCode={photo.reference_code}
+                onDownload={handleDownload}
+            />
 
             {/* CONFIRMATION MODAL FOR DELETION */}
             {showDeleteModal && (

@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import type { Photo, PhotoSession } from '@/types';
+import ImageLightboxModal from '@/components/ImageLightboxModal';
 import {
     Download,
     QrCode,
@@ -8,6 +10,8 @@ import {
     Plus,
     ExternalLink,
     Receipt,
+    ZoomIn,
+    Sparkles,
 } from 'lucide-react';
 
 export default function ResultPage() {
@@ -15,6 +19,8 @@ export default function ResultPage() {
     const navigate = useNavigate();
     const location = useLocation();
     const state = location.state as { photo?: Photo; photoSession?: PhotoSession } | null;
+
+    const [lightboxOpen, setLightboxOpen] = useState(false);
 
     const photo = state?.photo;
 
@@ -78,21 +84,46 @@ export default function ResultPage() {
 
             {/* Main Content Grid */}
             <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start mb-6 sm:mb-8">
-                {/* 4-Photo Photostrip Showcase */}
+                {/* 4-Photo Photostrip Showcase with Zoom Overlay */}
                 <div className="lg:col-span-5 flex justify-center animate-scale-in">
-                    <div className="editorial-card p-3 sm:p-3.5 max-w-xs w-full shadow-md flex flex-col items-center">
-                        <img
-                            src={imageSrc}
-                            alt={`EcoMemories Souvenir Strip ${photo.reference_code}`}
-                            className="rounded-lg max-h-[460px] sm:max-h-[580px] w-auto object-contain border border-[#E8E3D5]"
-                        />
-                        <button
-                            onClick={handleDownload}
-                            className="mt-3 text-xs font-mono font-semibold text-[#0E3E2B] hover:text-[#145239] flex items-center gap-1.5 transition-colors uppercase tracking-wider py-1"
+                    <div className="editorial-card p-3 sm:p-3.5 max-w-xs w-full shadow-md flex flex-col items-center group">
+                        {/* Interactive Click to Zoom Wrapper */}
+                        <div
+                            onClick={() => setLightboxOpen(true)}
+                            className="relative cursor-zoom-in overflow-hidden rounded-lg w-full flex justify-center bg-[#FAF8F5] border border-[#E8E3D5] group-hover:border-[#0E3E2B] transition-colors"
                         >
-                            <Download className="w-3.5 h-3.5 text-[#C5A059]" />
-                            <span>Download High-Res</span>
-                        </button>
+                            <img
+                                src={imageSrc}
+                                alt={`EcoMemories Souvenir Strip ${photo.reference_code}`}
+                                className="max-h-[460px] sm:max-h-[580px] w-auto object-contain transition-transform duration-300 group-hover:scale-[1.02]"
+                            />
+
+                            {/* Floating Hover Badge */}
+                            <div className="absolute bottom-3 inset-x-3 flex items-center justify-center opacity-90 group-hover:opacity-100 transition-opacity">
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0E3E2B]/85 backdrop-blur-xs text-white text-[10px] sm:text-[11px] font-mono tracking-wider uppercase font-semibold shadow-md">
+                                    <ZoomIn className="w-3.5 h-3.5 text-[#D4AF37]" />
+                                    <span>Click to Preview & Zoom</span>
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Actions under image */}
+                        <div className="flex items-center justify-between w-full mt-3 px-1 text-xs font-mono">
+                            <button
+                                onClick={() => setLightboxOpen(true)}
+                                className="text-[#52635C] hover:text-[#0E3E2B] flex items-center gap-1 transition-colors uppercase tracking-wider py-1 font-semibold"
+                            >
+                                <ZoomIn className="w-3.5 h-3.5 text-[#C5A059]" />
+                                <span>Inspect Detail</span>
+                            </button>
+                            <button
+                                onClick={handleDownload}
+                                className="text-[#0E3E2B] hover:text-[#145239] flex items-center gap-1 transition-colors uppercase tracking-wider py-1 font-bold"
+                            >
+                                <Download className="w-3.5 h-3.5 text-[#C5A059]" />
+                                <span>Download</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -162,8 +193,12 @@ export default function ResultPage() {
 
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-2.5 sm:gap-3 animate-fade-in-up stagger-2 w-full max-w-md sm:max-w-none">
-                <button onClick={handleDownload} className="btn-primary text-sm px-6 py-3 w-full sm:w-auto">
-                    <Download className="w-4 h-4 text-[#D4AF37]" />
+                <button onClick={() => setLightboxOpen(true)} className="btn-primary text-sm px-6 py-3 w-full sm:w-auto">
+                    <ZoomIn className="w-4 h-4 text-[#D4AF37]" />
+                    <span>Preview & Zoom</span>
+                </button>
+                <button onClick={handleDownload} className="btn-secondary text-sm px-6 py-3 w-full sm:w-auto">
+                    <Download className="w-4 h-4 text-[#C5A059]" />
                     <span>Download Photostrip</span>
                 </button>
                 <button onClick={() => navigate(`/session/${sessionCode}`)} className="btn-secondary text-sm px-6 py-3 w-full sm:w-auto">
@@ -175,6 +210,16 @@ export default function ResultPage() {
                     <span>New Session</span>
                 </button>
             </div>
+
+            {/* Lightbox Zoom Modal */}
+            <ImageLightboxModal
+                isOpen={lightboxOpen}
+                onClose={() => setLightboxOpen(false)}
+                imageSrc={imageSrc}
+                altText={`EcoMemories Souvenir Strip ${photo.reference_code}`}
+                referenceCode={photo.reference_code}
+                onDownload={handleDownload}
+            />
         </main>
     );
 }
