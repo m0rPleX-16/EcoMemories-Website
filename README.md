@@ -182,36 +182,33 @@ Supabase provides managed infrastructure.
 
 ## 3. Final Technology Stack
 
-  Layer                  Technology                 Purpose
-  ---------------------- -------------------------- ----------------------------------------
-  Frontend               React                      Photobooth interface
-  Frontend Language      TypeScript                 Type-safe frontend development
-  Build Tool             Vite                       Frontend development/build
-  Styling                Tailwind CSS               UI styling
-  Backend                Laravel                    API and business logic
-  Backend Language       PHP                        Laravel runtime
-  ORM                    Eloquent                   Database access
-  Authentication         Laravel Sanctum            User/device authentication
-  Database               PostgreSQL                 Persistent application data
-  Cloud Database         Supabase PostgreSQL        Optional managed PostgreSQL
-  Storage                Supabase Storage           Photo/object storage
-  Realtime               Laravel Reverb             Realtime frontend updates
-  Cache                  Redis                      Temporary state/cache
-  Queue                  Laravel Queue              Background jobs
-  Hardware Prototype     Arduino                    Initial physical prototype
-  Future Hardware        ESP32                      Standalone Wi-Fi device
-  Sensors                IR sensor                  Object detection
-  Weight Detection       Load Cell                  Weight measurement
-  Load Cell Interface    HX711                      Load-cell amplifier/ADC
-  Hardware Connection    USB Serial                 Arduino-to-laptop prototype
-  Device Communication   HTTP                       Initial device API
-  Future IoT Protocol    MQTT                       Optional advanced device communication
-  Camera                 Browser MediaDevices API   Camera access
-  Image Processing       Canvas API                 Capture/basic processing
-  Printer                USB Thermal Printer        Physical receipt/ticket
-  Print Bridge           Python/Node.js             Local printer communication
-  Containers             Docker                     Reproducible development/deployment
-  CI/CD                  GitHub Actions             Automated testing/deployment
+| Layer | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Frontend** | React 19 | Photobooth user interface & SPA routing |
+| **Frontend Language** | TypeScript | Type-safe frontend architecture |
+| **Build Tool** | Vite | Ultra-fast HMR and frontend bundling |
+| **Styling** | Tailwind CSS v4 | Editorial BuildAI School-inspired UI design system |
+| **Icons & Typography** | Lucide React + Google Fonts | Modern vector iconography & editorial typography |
+| **Backend** | Laravel 13 | Core application brain, API & reward engine |
+| **Backend Language** | PHP 8.3+ | Laravel runtime environment |
+| **ORM** | Eloquent ORM | Database models, migrations & relations |
+| **Authentication** | Laravel Sanctum | Session, user, and device token auth |
+| **Database** | PostgreSQL | Relational transactional database |
+| **Cloud Database** | Supabase PostgreSQL | Optional managed cloud PostgreSQL |
+| **Cloud Storage** | Supabase Storage / S3 | High-res photo strip object storage |
+| **Realtime** | Laravel Reverb | Realtime event broadcasting |
+| **Cache & Sessions** | Redis / Database | Session state and cache |
+| **Background Queues** | Laravel Queue | Async receipt printing & photo processing |
+| **Hardware Prototype** | Arduino Uno / Mega | Initial sensor reading & serial telemetry |
+| **Standalone IoT** | ESP32 | Direct Wi-Fi HTTP / MQTT telemetry |
+| **Sensors** | Infrared (IR) Sensor | Object passage & intake detection |
+| **Weight Validation** | Load Cell + HX711 | Bottle/can weight validation ADC |
+| **Device Communication** | HTTP REST & WebSockets | Telemetry and event dispatching |
+| **Camera Capture** | Browser MediaDevices API | High-definition live webcam feed |
+| **Compositor Engine** | HTML5 Canvas API | 4-pose photostrip compositing & export |
+| **Printer** | ESC/POS Thermal Printer | Physical receipt & QR ticket printing |
+| **Print Bridge** | Python / Node.js Local Bridge | USB thermal printer hardware interface |
+| **Containers & CI** | Docker & GitHub Actions | Reproducible environments and automation |
 
 ---
 
