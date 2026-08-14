@@ -14,7 +14,6 @@ import {
     CheckCircle2,
     History,
     ArrowUpRight,
-    Leaf,
 } from 'lucide-react';
 
 export default function SessionPage() {
@@ -93,7 +92,7 @@ export default function SessionPage() {
 
     if (loading) {
         return (
-            <main className="flex-1 flex items-center justify-center">
+            <main className="flex-1 flex items-center justify-center p-4">
                 <div className="text-center">
                     <Loader2 className="w-8 h-8 text-[#0E3E2B] animate-spin mx-auto mb-3" />
                     <p className="text-[#52635C] font-mono text-xs uppercase tracking-widest">
@@ -106,11 +105,11 @@ export default function SessionPage() {
 
     if (!session) {
         return (
-            <main className="flex-1 flex items-center justify-center px-6">
-                <div className="editorial-card p-8 text-center max-w-md">
+            <main className="flex-1 flex items-center justify-center px-4 sm:px-6">
+                <div className="editorial-card p-6 sm:p-8 text-center max-w-md w-full">
                     <h2 className="text-2xl font-bold font-serif-editorial text-[#0E3E2B] mb-2">Session Not Found</h2>
                     <p className="text-[#52635C] text-sm mb-6">This session may have expired or does not exist.</p>
-                    <button onClick={() => navigate('/')} className="btn-primary">
+                    <button onClick={() => navigate('/')} className="btn-primary w-full sm:w-auto">
                         Start New Session
                     </button>
                 </div>
@@ -122,11 +121,11 @@ export default function SessionPage() {
     const depositsInCurrentCycle = depositCount % requiredDeposits;
 
     return (
-        <main className="flex-1 flex flex-col items-center justify-center px-6 py-12 max-w-4xl mx-auto w-full">
+        <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-8 sm:py-12 max-w-4xl mx-auto w-full">
             {showCelebration && <Confetti />}
 
             {/* Top Monospace Tag & Session Code */}
-            <div className="animate-fade-in-up mb-6 flex items-center gap-2">
+            <div className="animate-fade-in-up mb-5 sm:mb-6 flex items-center gap-2 flex-wrap justify-center">
                 <span className="pill-mono">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
                     SESSION #{session.session_code}
@@ -137,7 +136,7 @@ export default function SessionPage() {
             </div>
 
             {/* Progress Ring */}
-            <div className="animate-scale-in mb-6">
+            <div className="animate-scale-in mb-5 sm:mb-6">
                 <ProgressRing
                     progress={credits > 0 ? 1 : progressPercent}
                     current={credits > 0 ? requiredDeposits : depositsInCurrentCycle}
@@ -148,32 +147,32 @@ export default function SessionPage() {
             </div>
 
             {/* Status Text (Editorial Headline with Italic Accent) */}
-            <div className="text-center mb-8 animate-fade-in-up stagger-1 max-w-md">
+            <div className="text-center mb-6 sm:mb-8 animate-fade-in-up stagger-1 max-w-md px-2">
                 {credits > 0 ? (
                     <>
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FBF3DC] border border-[#E5D6A8] text-[#8C6D1F] font-mono text-[11px] font-bold uppercase tracking-wider mb-2">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FBF3DC] border border-[#E5D6A8] text-[#8C6D1F] font-mono text-[10px] sm:text-[11px] font-bold uppercase tracking-wider mb-2">
                             <Sparkles className="w-3.5 h-3.5" />
                             <span>{credits} Photo Credit Available</span>
                         </div>
-                        <h2 className="text-3xl sm:text-4xl font-serif-editorial text-[#0E3E2B] mb-2 leading-tight">
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif-editorial text-[#0E3E2B] mb-2 leading-tight">
                             Reward earned.{' '}
                             <span className="highlight-gold">
                                 Ready for your 4 poses.
                             </span>
                         </h2>
-                        <p className="text-sm text-[#52635C]">
+                        <p className="text-xs sm:text-sm text-[#52635C]">
                             Step into the photobooth to capture your 4-shot souvenir strip.
                         </p>
                     </>
                 ) : (
                     <>
-                        <h2 className="text-3xl sm:text-4xl font-serif-editorial text-[#0E3E2B] mb-2 leading-tight">
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif-editorial text-[#0E3E2B] mb-2 leading-tight">
                             Deposit recyclables.{' '}
                             <span className="highlight-gold">
                                 Unlock booth.
                             </span>
                         </h2>
-                        <p className="text-sm text-[#52635C]">
+                        <p className="text-xs sm:text-sm text-[#52635C]">
                             {depositsInCurrentCycle} of {requiredDeposits} items collected
                             {depositCount > 0 && (
                                 <span className="font-mono text-xs text-[#0E3E2B] font-semibold"> • {depositCount} total</span>
@@ -184,12 +183,12 @@ export default function SessionPage() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-center gap-3 animate-fade-in-up stagger-2">
+            <div className="flex flex-col sm:flex-row items-center gap-3 animate-fade-in-up stagger-2 w-full max-w-xs sm:max-w-none justify-center">
                 {credits > 0 && (
                     <button
                         id="take-photo-btn"
                         onClick={startPhotoSession}
-                        className="btn-gold text-base px-8 py-3.5"
+                        className="btn-gold text-sm sm:text-base px-6 sm:px-8 py-3.5 w-full sm:w-auto"
                     >
                         <Camera className="w-4 h-4" />
                         <span>Enter Camera Booth (4 Shots)</span>
@@ -201,7 +200,7 @@ export default function SessionPage() {
                     id="simulate-deposit-btn"
                     onClick={simulateDeposit}
                     disabled={depositing}
-                    className={credits > 0 ? 'btn-secondary text-sm' : 'btn-primary text-base px-8 py-3.5'}
+                    className={`${credits > 0 ? 'btn-secondary text-sm' : 'btn-primary text-sm sm:text-base px-6 sm:px-8 py-3.5'} w-full sm:w-auto`}
                 >
                     {depositing ? (
                         <>
@@ -219,22 +218,22 @@ export default function SessionPage() {
 
             {/* Deposit History Log (BuildAI School Bento Style) */}
             {session.deposits && session.deposits.length > 0 && (
-                <div className="mt-10 w-full max-w-md animate-fade-in-up stagger-3">
+                <div className="mt-8 sm:mt-10 w-full max-w-md animate-fade-in-up stagger-3">
                     <div className="flex items-center justify-between border-b border-[#E8E3D5] pb-2 mb-3">
                         <div className="flex items-center gap-1.5 text-xs font-mono font-bold tracking-wider text-[#0E3E2B] uppercase">
                             <History className="w-3.5 h-3.5 text-[#C5A059]" />
                             <span>INTAKE LOG</span>
                         </div>
-                        <span className="font-mono text-[11px] text-[#83948C]">
+                        <span className="font-mono text-[10px] sm:text-[11px] text-[#83948C]">
                             {session.deposits.length} ENTRIES
                         </span>
                     </div>
 
-                    <div className="editorial-card p-4 space-y-2 max-h-40 overflow-y-auto">
+                    <div className="editorial-card p-3.5 sm:p-4 space-y-1.5 max-h-40 overflow-y-auto">
                         {[...session.deposits].reverse().slice(0, 10).map((deposit) => (
                             <div key={deposit.id} className="flex items-center justify-between text-xs py-1 border-b border-[#F4EFE6] last:border-0">
                                 <div className="flex items-center gap-2">
-                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700 flex-shrink-0" />
                                     <span className="text-[#14221D] font-mono text-[11px] font-medium">
                                         ITEM #{deposit.id}
                                     </span>
@@ -249,7 +248,7 @@ export default function SessionPage() {
             )}
 
             {/* Return link */}
-            <div className="mt-8 animate-fade-in-up stagger-4">
+            <div className="mt-6 sm:mt-8 animate-fade-in-up stagger-4">
                 <button
                     onClick={() => navigate('/')}
                     className="text-xs font-mono text-[#52635C] hover:text-[#0E3E2B] transition-colors flex items-center gap-1.5 uppercase tracking-wider"

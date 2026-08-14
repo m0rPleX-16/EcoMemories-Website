@@ -18,8 +18,7 @@
     "forceConsistentCasingInFileNames": true,
     "paths": {
       "@/*": ["./resources/js/*"]
-    },
-    "baseUrl": "."
+    }
   },
   "include": ["resources/js/**/*.ts", "resources/js/**/*.tsx"]
 }
