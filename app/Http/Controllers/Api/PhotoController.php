@@ -102,4 +102,36 @@ class PhotoController extends Controller
             'photo' => $photo,
         ]);
     }
+
+    /**
+     * Delete a photo by reference code (GDPR Right to Erasure / Privacy Compliance).
+     *
+     * DELETE /api/photos/{reference}
+     */
+    public function destroy(string $reference, TransactionService $transactionService): JsonResponse
+    {
+        $photo = Photo::where('reference_code', $reference)->firstOrFail();
+
+        // Delete physical file from storage disk if exists
+        if ($photo->storage_path && Storage::disk('public')->exists($photo->storage_path)) {
+            Storage::disk('public')->delete($photo->storage_path);
+        }
+
+        // Record audit transaction before deleting
+        if ($photo->photoSession && $photo->photoSession->session) {
+            $transactionService->record(
+                $photo->photoSession->session,
+                'photo_deleted_by_user_request',
+                $photo->id,
+                ['reference_code' => $reference]
+            );
+        }
+
+        $photo->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Photo {$reference} has been permanently deleted in accordance with data privacy regulations.",
+        ]);
+    }
 }

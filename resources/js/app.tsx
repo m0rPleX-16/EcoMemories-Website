@@ -6,6 +6,8 @@ import SessionPage from './pages/SessionPage';
 import CameraPage from './pages/CameraPage';
 import ResultPage from './pages/ResultPage';
 import PhotoPage from './pages/PhotoPage';
+import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
 
 function App() {
     return (
@@ -17,6 +19,8 @@ function App() {
                     <Route path="/session/:sessionCode/camera" element={<CameraPage />} />
                     <Route path="/session/:sessionCode/result" element={<ResultPage />} />
                     <Route path="/photo/:reference" element={<PhotoPage />} />
+                    <Route path="/privacy" element={<PrivacyPage />} />
+                    <Route path="/terms" element={<TermsPage />} />
                 </Route>
             </Routes>
         </BrowserRouter>

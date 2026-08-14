@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { Leaf, ArrowUpRight } from 'lucide-react';
+import { Leaf, ArrowUpRight, ShieldCheck, FileText } from 'lucide-react';
 
 export default function Layout() {
     const location = useLocation();
@@ -65,6 +65,26 @@ export default function Layout() {
                         <span>•</span>
                         <span>TURN WASTE INTO LASTING MEMORIES</span>
                     </div>
+
+                    {/* Compliance & Policy Links */}
+                    <div className="flex items-center gap-4 text-[10px] sm:text-[11px] font-semibold text-[#52635C]">
+                        <Link
+                            to="/privacy"
+                            className="hover:text-[#0E3E2B] hover:underline transition-colors flex items-center gap-1"
+                        >
+                            <ShieldCheck className="w-3 h-3 text-emerald-700" />
+                            <span>Privacy Policy</span>
+                        </Link>
+                        <span>•</span>
+                        <Link
+                            to="/terms"
+                            className="hover:text-[#0E3E2B] hover:underline transition-colors flex items-center gap-1"
+                        >
+                            <FileText className="w-3 h-3 text-[#C5A059]" />
+                            <span>Terms of Use</span>
+                        </Link>
+                    </div>
+
                     <div>
                         <span>AUTONOMOUS ECO KIOSK © {new Date().getFullYear()}</span>
                     </div>

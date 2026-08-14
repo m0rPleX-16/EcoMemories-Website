@@ -11,6 +11,10 @@ import {
     AlertCircle,
     Calendar,
     Sparkles,
+    Trash2,
+    ShieldCheck,
+    CheckCircle2,
+    X,
 } from 'lucide-react';
 
 export default function PhotoPage() {
@@ -18,6 +22,11 @@ export default function PhotoPage() {
     const [photo, setPhoto] = useState<Photo | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
+
+    // Deletion states
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [deleted, setDeleted] = useState(false);
 
     useEffect(() => {
         if (!reference) return;
@@ -38,41 +47,9 @@ export default function PhotoPage() {
         fetchPhoto();
     }, [reference]);
 
-    if (loading) {
-        return (
-            <main className="flex-1 flex items-center justify-center p-4">
-                <div className="text-center">
-                    <Loader2 className="w-8 h-8 text-[#0E3E2B] animate-spin mx-auto mb-3" />
-                    <p className="text-[#52635C] font-mono text-xs uppercase tracking-widest">
-                        Retrieving souvenir photostrip...
-                    </p>
-                </div>
-            </main>
-        );
-    }
-
-    if (error || !photo) {
-        return (
-            <main className="flex-1 flex items-center justify-center px-4 sm:px-6">
-                <div className="editorial-card p-6 sm:p-8 text-center max-w-md w-full animate-scale-in">
-                    <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#FBF3DC] text-[#8C6D1F] border border-[#E5D6A8] mb-4">
-                        <AlertCircle className="w-6 h-6" />
-                    </div>
-                    <h2 className="text-2xl font-bold font-serif-editorial text-[#0E3E2B] mb-2">Photostrip Not Found</h2>
-                    <p className="text-[#52635C] mb-6 text-sm">
-                        This souvenir link may be incorrect or has expired.
-                    </p>
-                    <Link to="/" className="btn-primary inline-flex w-full sm:w-auto justify-center">
-                        Return to Station
-                    </Link>
-                </div>
-            </main>
-        );
-    }
-
-    const imageUrl = photo.public_url || `/storage/${photo.storage_path}`;
-
     const handleDownload = async () => {
+        if (!photo) return;
+        const imageUrl = photo.public_url || `/storage/${photo.storage_path}`;
         try {
             const response = await fetch(imageUrl);
             const blob = await response.blob();
@@ -92,6 +69,78 @@ export default function PhotoPage() {
     const handlePrint = () => {
         window.print();
     };
+
+    const handleDeletePhoto = async () => {
+        if (!reference) return;
+        setDeleting(true);
+        try {
+            const { data } = await api.delete(`/photos/${reference}`);
+            if (data.success) {
+                setDeleted(true);
+                setShowDeleteModal(false);
+            }
+        } catch (err) {
+            console.error('Failed to delete photo:', err);
+            alert('Failed to delete photo. Please try again or contact support.');
+        } finally {
+            setDeleting(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <main className="flex-1 flex items-center justify-center p-4">
+                <div className="text-center">
+                    <Loader2 className="w-8 h-8 text-[#0E3E2B] animate-spin mx-auto mb-3" />
+                    <p className="text-[#52635C] font-mono text-xs uppercase tracking-widest">
+                        Retrieving souvenir photostrip...
+                    </p>
+                </div>
+            </main>
+        );
+    }
+
+    if (deleted) {
+        return (
+            <main className="flex-1 flex items-center justify-center px-4 sm:px-6 py-12">
+                <div className="editorial-card p-6 sm:p-8 text-center max-w-md w-full animate-scale-in">
+                    <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200 mb-4">
+                        <CheckCircle2 className="w-7 h-7" />
+                    </div>
+                    <h2 className="text-2xl font-bold font-serif-editorial text-[#0E3E2B] mb-2">
+                        Photostrip Permanently Deleted
+                    </h2>
+                    <p className="text-[#52635C] mb-6 text-xs sm:text-sm leading-relaxed">
+                        In accordance with our Data Privacy Policy and GDPR Right to Erasure, photostrip <strong>{reference}</strong> and all associated storage records have been permanently purged from our servers.
+                    </p>
+                    <Link to="/" className="btn-primary inline-flex w-full sm:w-auto justify-center">
+                        Return to Station
+                    </Link>
+                </div>
+            </main>
+        );
+    }
+
+    if (error || !photo) {
+        return (
+            <main className="flex-1 flex items-center justify-center px-4 sm:px-6">
+                <div className="editorial-card p-6 sm:p-8 text-center max-w-md w-full animate-scale-in">
+                    <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#FBF3DC] text-[#8C6D1F] border border-[#E5D6A8] mb-4">
+                        <AlertCircle className="w-6 h-6" />
+                    </div>
+                    <h2 className="text-2xl font-bold font-serif-editorial text-[#0E3E2B] mb-2">Photostrip Not Found</h2>
+                    <p className="text-[#52635C] mb-6 text-sm">
+                        This souvenir link may be incorrect, has expired, or has been erased by the user.
+                    </p>
+                    <Link to="/" className="btn-primary inline-flex w-full sm:w-auto justify-center">
+                        Return to Station
+                    </Link>
+                </div>
+            </main>
+        );
+    }
+
+    const imageUrl = photo.public_url || `/storage/${photo.storage_path}`;
 
     return (
         <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-10 max-w-4xl mx-auto w-full">
@@ -148,13 +197,76 @@ export default function PhotoPage() {
                 </Link>
             </div>
 
+            {/* Compliance Erasure Request Option */}
+            <div className="mb-8 text-center animate-fade-in-up stagger-3">
+                <button
+                    onClick={() => setShowDeleteModal(true)}
+                    className="text-xs font-mono text-[#83948C] hover:text-red-700 transition-colors inline-flex items-center gap-1.5 uppercase tracking-wider underline"
+                >
+                    <Trash2 className="w-3 h-3 text-red-500" />
+                    <span>Request Data Erasure / Delete Photo</span>
+                </button>
+            </div>
+
             {/* Environmental Footer */}
-            <div className="text-center animate-fade-in-up stagger-3 flex items-center justify-center gap-2 px-2">
+            <div className="text-center animate-fade-in-up stagger-4 flex items-center justify-center gap-2 px-2">
                 <Sparkles className="w-3 h-3 text-[#C5A059] flex-shrink-0" />
                 <p className="text-[10px] sm:text-[11px] font-mono text-[#83948C] tracking-wider uppercase">
                     Every recycled item counts • Turn waste into lasting memories
                 </p>
             </div>
+
+            {/* CONFIRMATION MODAL FOR DELETION */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 z-50 bg-[#08291B]/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+                    <div className="editorial-card p-6 sm:p-8 max-w-md w-full animate-scale-in relative">
+                        <button
+                            onClick={() => setShowDeleteModal(false)}
+                            className="absolute top-4 right-4 text-[#83948C] hover:text-[#0E3E2B]"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-red-50 text-red-700 border border-red-200 mb-4">
+                            <Trash2 className="w-6 h-6 text-red-600" />
+                        </div>
+
+                        <h3 className="text-xl font-bold font-serif-editorial text-[#0E3E2B] mb-2">
+                            Permanently Erase Souvenir?
+                        </h3>
+                        <p className="text-xs sm:text-sm text-[#52635C] leading-relaxed mb-6">
+                            This action will permanently delete photostrip <strong>{photo.reference_code}</strong> from our storage disk. Anyone with the QR code or URL will no longer be able to access it.
+                        </p>
+
+                        <div className="flex flex-col sm:flex-row items-center gap-3">
+                            <button
+                                onClick={handleDeletePhoto}
+                                disabled={deleting}
+                                className="w-full sm:w-1/2 py-3 px-4 rounded-xl bg-red-700 hover:bg-red-800 text-white font-semibold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2"
+                            >
+                                {deleting ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                                        <span>Erasing...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Trash2 className="w-4 h-4" />
+                                        <span>Yes, Delete</span>
+                                    </>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => setShowDeleteModal(false)}
+                                disabled={deleting}
+                                className="w-full sm:w-1/2 py-3 px-4 rounded-xl border border-[#E8E3D5] bg-white hover:bg-[#FAF8F5] text-[#52635C] font-semibold text-xs uppercase tracking-wider transition-all"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </main>
     );
 }
