@@ -6,21 +6,21 @@
 > photo and receive a thermal-printed receipt/ticket containing their
 > reward information and a QR code linking to the digital photo.
 
-------------------------------------------------------------------------
+---
 
 ## 1. Project Overview
 
 ### 1.1 Concept
 
-EcoPhotoBooth combines:
+EcoMemories combines:
 
--   A web-based photobooth
--   An automated trash/recycling collection device
--   A reward/credit system
--   A thermal printer
--   An optional cloud backend
--   Realtime device-to-web communication
--   Environmental statistics
+- A web-based photobooth
+- An automated trash/recycling collection device
+- A reward/credit system
+- A thermal printer
+- An optional cloud backend
+- Realtime device-to-web communication
+- Environmental statistics
 
 The system should be developed incrementally so that hardware cost does
 not block software development.
@@ -39,21 +39,21 @@ inside the Arduino/microcontroller.
 
 ### 1.3 Primary Goals
 
-1.  Build a working photobooth application.
-2.  Build a reliable deposit/reward system.
-3.  Connect physical hardware to the application.
-4.  Print a thermal receipt/ticket after a successful photo session.
-5.  Track environmental statistics.
-6.  Keep the architecture replaceable and extensible.
-7.  Minimize initial hardware and hosting costs.
-8.  Support gradual migration from prototype hardware to a standalone
+1. Build a working photobooth application.
+2. Build a reliable deposit/reward system.
+3. Connect physical hardware to the application.
+4. Print a thermal receipt/ticket after a successful photo session.
+5. Track environmental statistics.
+6. Keep the architecture replaceable and extensible.
+7. Minimize initial hardware and hosting costs.
+8. Support gradual migration from prototype hardware to a standalone
     IoT device.
 
-------------------------------------------------------------------------
+---
 
-# 2. Design Principles
+## 2. Design Principles
 
-## 2.1 Software First, Hardware Later
+### 2.1 Software First, Hardware Later
 
 Do not make the physical trashcan a prerequisite for development.
 
@@ -82,14 +82,14 @@ Finally:
 ESP32 → Wi-Fi → Laravel
 ```
 
-### Rationale
+#### Rationale (Software First, Hardware Later)
 
 This separates software development from hardware availability and
 reduces financial risk.
 
-------------------------------------------------------------------------
+---
 
-## 2.2 Backend Owns Business Logic
+### 2.2 Backend Owns Business Logic
 
 The microcontroller should not decide:
 
@@ -115,29 +115,29 @@ Evaluate reward rules
 Create credit
 ```
 
-### Rationale
+#### Rationale (Backend Owns Business Logic)
 
 Business rules change more frequently than hardware firmware.
 
 Keeping reward logic in Laravel makes it:
 
--   Testable
--   Configurable
--   Easier to change
--   Easier to audit
--   Independent of hardware
+- Testable
+- Configurable
+- Easier to change
+- Easier to audit
+- Independent of hardware
 
-------------------------------------------------------------------------
+---
 
-## 2.3 Hardware Is a Device Client
+### 2.3 Hardware Is a Device Client
 
 The backend should not care whether an event comes from:
 
--   A simulator
--   Arduino
--   ESP32
--   Raspberry Pi
--   Another microcontroller
+- A simulator
+- Arduino
+- ESP32
+- Raspberry Pi
+- Another microcontroller
 
 All devices should communicate using the same logical event structure.
 
@@ -151,13 +151,13 @@ Example:
 }
 ```
 
-### Rationale
+#### Rationale (Hardware Is a Device Client)
 
 This allows the hardware to be replaced without redesigning the backend.
 
-------------------------------------------------------------------------
+---
 
-## 2.4 Cloud Is an Infrastructure Layer
+### 2.4 Cloud Is an Infrastructure Layer
 
 Supabase should not automatically become the application's
 business-logic layer.
@@ -178,9 +178,9 @@ Laravel remains the application brain.
 
 Supabase provides managed infrastructure.
 
-------------------------------------------------------------------------
+---
 
-# 3. Final Technology Stack
+## 3. Final Technology Stack
 
   Layer                  Technology                 Purpose
   ---------------------- -------------------------- ----------------------------------------
@@ -213,14 +213,14 @@ Supabase provides managed infrastructure.
   Containers             Docker                     Reproducible development/deployment
   CI/CD                  GitHub Actions             Automated testing/deployment
 
-------------------------------------------------------------------------
+---
 
-# 4. High-Level Architecture
+## 4. High-Level Architecture
 
-## 4.1 Target Architecture
+### 4.1 Target Architecture
 
 ``` text
-                         ECO PHOTOBOOTH
+                         ECOMEMORIES
                               │
               ┌───────────────┴────────────────┐
               │                                │
@@ -272,22 +272,22 @@ Supabase provides managed infrastructure.
        Development           Production
 ```
 
-------------------------------------------------------------------------
+---
 
-# 5. Physical Architecture
+## 5. Physical Architecture
 
 The physical installation should be separated into two major systems.
 
-## 5.1 Recycling Device
+### 5.1 Recycling Device
 
 Responsibilities:
 
--   Detect deposited objects
--   Measure weight
--   Determine sensor-level validity
--   Send device events
--   Provide local feedback through LEDs/buzzer
--   Report device health
+- Detect deposited objects
+- Measure weight
+- Determine sensor-level validity
+- Send device events
+- Provide local feedback through LEDs/buzzer
+- Report device health
 
 Example:
 
@@ -307,18 +307,18 @@ Device Event
 Laravel
 ```
 
-## 5.2 Photobooth Device
+### 5.2 Photobooth Device
 
 Responsibilities:
 
--   Run React photobooth
--   Access camera
--   Display user session
--   Display deposit progress
--   Capture photo
--   Preview photo
--   Trigger print job
--   Show QR code/photo result
+- Run React photobooth
+- Access camera
+- Display user session
+- Display deposit progress
+- Capture photo
+- Preview photo
+- Trigger print job
+- Show QR code/photo result
 
 Example:
 
@@ -331,16 +331,16 @@ Laptop
     └── Thermal Printer
 ```
 
-### Rationale
+#### Rationale (Photobooth Device)
 
 Keeping recycling hardware and photobooth/printing hardware separate
 makes debugging and replacement easier.
 
-------------------------------------------------------------------------
+---
 
-# 6. Hardware Strategy
+## 6. Hardware Strategy
 
-## 6.1 Stage A --- No Hardware
+### 6.1 Stage A --- No Hardware
 
 Use a simulator:
 
@@ -366,14 +366,14 @@ Then:
 PHOTO CREDIT +1
 ```
 
-### Goal
+#### Goal (Stage A --- No Hardware)
 
 Prove that the complete software workflow works before purchasing
 hardware.
 
-------------------------------------------------------------------------
+---
 
-## 6.2 Stage B --- Arduino + Laptop
+### 6.2 Stage B --- Arduino + Laptop
 
 Use an existing Arduino if available.
 
@@ -411,14 +411,14 @@ Then calls:
 POST /api/devices/events
 ```
 
-### Goal
+#### Goal (Stage B --- Arduino + Laptop)
 
 Test real hardware communication without needing a Wi-Fi-capable
 microcontroller.
 
-------------------------------------------------------------------------
+---
 
-## 6.3 Stage C --- IR Sensor
+### 6.3 Stage C --- IR Sensor
 
 Replace the development button with an IR sensor.
 
@@ -432,21 +432,21 @@ Microcontroller
 DEPOSIT
 ```
 
-### Limitation
+#### Limitation (Stage C --- IR Sensor)
 
 An IR sensor alone may be vulnerable to false positives or simple abuse.
 
 It should be considered an initial detection mechanism rather than final
 validation.
 
-------------------------------------------------------------------------
+---
 
-## 6.4 Stage D --- Weight Validation
+### 6.4 Stage D --- Weight Validation
 
 Add:
 
--   Load cell
--   HX711
+- Load cell
+- HX711
 
 Logic:
 
@@ -458,13 +458,13 @@ Weight detected
 Valid deposit
 ```
 
-### Goal
+#### Goal (Stage D --- Weight Validation)
 
 Improve deposit validation and reduce simple false positives.
 
-------------------------------------------------------------------------
+---
 
-## 6.5 Stage E --- ESP32
+### 6.5 Stage E --- ESP32
 
 Once budget permits:
 
@@ -483,14 +483,14 @@ ESP32
 
 The laptop is no longer required for the recycling device.
 
-### Rationale
+#### Rationale (Stage E --- ESP32)
 
 ESP32 provides Wi-Fi and enough GPIO/peripheral support for the expected
 prototype.
 
-------------------------------------------------------------------------
+---
 
-# 7. Photobooth Flow
+## 7. Photobooth Flow
 
 The intended user experience:
 
@@ -524,9 +524,9 @@ THERMAL RECEIPT
 DISPLAY DIGITAL PHOTO / QR
 ```
 
-------------------------------------------------------------------------
+---
 
-# 8. Session Design
+## 8. Session Design
 
 A user does not need a permanent account for the MVP.
 
@@ -569,14 +569,14 @@ Credits: 0
 Photos: 1
 ```
 
-### Rationale
+### Rationale (Session Design)
 
 A temporary session keeps the initial system simple while preserving a
 path toward accounts, QR codes, RFID, NFC, or student IDs later.
 
-------------------------------------------------------------------------
+---
 
-# 9. Database Design
+## 9. Database Design
 
 Initial entities:
 
@@ -591,7 +591,7 @@ photos
 transactions
 ```
 
-## 9.1 users
+### 9.1 users
 
 ``` text
 id
@@ -603,9 +603,9 @@ updated_at
 
 Optional for MVP.
 
-------------------------------------------------------------------------
+---
 
-## 9.2 devices
+### 9.2 devices
 
 ``` text
 id
@@ -626,9 +626,9 @@ TRASH-001
 TRASH-002
 ```
 
-------------------------------------------------------------------------
+---
 
-## 9.3 sessions
+### 9.3 sessions
 
 ``` text
 id
@@ -640,9 +640,9 @@ expires_at
 updated_at
 ```
 
-------------------------------------------------------------------------
+---
 
-## 9.4 deposits
+### 9.4 deposits
 
 ``` text
 id
@@ -664,9 +664,9 @@ invalid
 rejected
 ```
 
-------------------------------------------------------------------------
+---
 
-## 9.5 rewards
+### 9.5 rewards
 
 ``` text
 id
@@ -685,9 +685,9 @@ amount: 1
 status: available
 ```
 
-------------------------------------------------------------------------
+---
 
-## 9.6 photo_sessions
+### 9.6 photo_sessions
 
 ``` text
 id
@@ -699,9 +699,9 @@ created_at
 completed_at nullable
 ```
 
-------------------------------------------------------------------------
+---
 
-## 9.7 photos
+### 9.7 photos
 
 ``` text
 id
@@ -713,9 +713,9 @@ created_at
 
 The database stores metadata, not the actual image binary.
 
-------------------------------------------------------------------------
+---
 
-## 9.8 transactions
+### 9.8 transactions
 
 Use this for an audit trail.
 
@@ -738,9 +738,9 @@ photo_created
 print_requested
 ```
 
-------------------------------------------------------------------------
+---
 
-# 10. Reward Engine
+## 10. Reward Engine
 
 The reward system should be implemented as a service.
 
@@ -786,20 +786,20 @@ session.deposit_count = 5
 
 Store each deposit individually.
 
-### Rationale
+### Rationale (Reward Engine)
 
 Individual deposit records provide:
 
--   Auditability
--   Debugging
--   Environmental statistics
--   Fraud detection
--   Device diagnostics
--   Future analytics
+- Auditability
+- Debugging
+- Environmental statistics
+- Fraud detection
+- Device diagnostics
+- Future analytics
 
-------------------------------------------------------------------------
+---
 
-# 11. Device Event API
+## 11. Device Event API
 
 The device should communicate through an event-oriented API.
 
@@ -822,14 +822,14 @@ Payload:
 
 Laravel should:
 
-1.  Authenticate device.
-2.  Validate payload.
-3.  Check duplicate event IDs.
-4.  Validate the session.
-5.  Record deposit.
-6.  Run reward logic.
-7.  Broadcast the result.
-8.  Return the updated state.
+1. Authenticate device.
+2. Validate payload.
+3. Check duplicate event IDs.
+4. Validate the session.
+5. Record deposit.
+6. Run reward logic.
+7. Broadcast the result.
+8. Return the updated state.
 
 Example response:
 
@@ -848,9 +848,9 @@ Example response:
 }
 ```
 
-------------------------------------------------------------------------
+---
 
-# 12. Device Authentication
+## 12. Device Authentication
 
 Devices should eventually have credentials.
 
@@ -876,14 +876,14 @@ Device active?
 Accept event
 ```
 
-### Rationale
+### Rationale (Device Authentication)
 
 Without device authentication, anyone who knows the API endpoint could
 potentially generate fake deposits.
 
-------------------------------------------------------------------------
+---
 
-# 13. Idempotency
+## 13. Idempotency
 
 IoT devices may retry requests.
 
@@ -919,13 +919,13 @@ evt-000123
 
 Laravel should reject duplicate event IDs.
 
-### Rationale
+### Rationale (Idempotency)
 
 This prevents network retries from creating duplicate rewards.
 
-------------------------------------------------------------------------
+---
 
-# 14. Realtime Communication
+## 14. Realtime Communication
 
 Use Laravel Reverb after the basic system works.
 
@@ -956,25 +956,25 @@ Deposits: 5 / 5
 🎉 PHOTO CREDIT EARNED
 ```
 
-### Rationale
+### Rationale (Realtime Communication)
 
 Realtime communication creates a better physical-machine experience
 without polling the API repeatedly.
 
-------------------------------------------------------------------------
+---
 
-# 15. Redis
+## 15. Redis
 
 Redis should be introduced after the basic MVP.
 
 Potential uses:
 
--   Temporary session state
--   Device online status
--   Rate limiting
--   Caching
--   Queue support
--   Realtime counters
+- Temporary session state
+- Device online status
+- Rate limiting
+- Caching
+- Queue support
+- Realtime counters
 
 Do not introduce Redis merely because it is available.
 
@@ -986,9 +986,9 @@ Laravel + PostgreSQL
 
 and add Redis when the application has a real need for it.
 
-------------------------------------------------------------------------
+---
 
-# 16. Supabase Strategy
+## 16. Supabase Strategy
 
 Supabase is optional.
 
@@ -1008,17 +1008,17 @@ Laravel
 Supabase Storage
 ```
 
-## Supabase PostgreSQL
+### Supabase PostgreSQL
 
 Use it as managed PostgreSQL infrastructure if desired.
 
-## Supabase Storage
+### Supabase Storage
 
 Use it for:
 
--   Photos
--   Generated photo assets
--   Potential future media
+- Photos
+- Generated photo assets
+- Potential future media
 
 Example:
 
@@ -1057,14 +1057,14 @@ React
 
 for the same business workflow.
 
-------------------------------------------------------------------------
+---
 
-# 17. Offline/Connectivity Strategy
+## 17. Offline/Connectivity Strategy
 
 The system is intended for a physical installation, so network failure
 must eventually be considered.
 
-## Initial prototype
+### Initial prototype
 
 Internet required.
 
@@ -1076,7 +1076,7 @@ Laptop
 Laravel
 ```
 
-## Future architecture
+### Future architecture
 
 The photobooth/laptop can maintain a local queue:
 
@@ -1102,14 +1102,14 @@ Synchronization
 Cloud Backend
 ```
 
-### Rationale
+### Rationale (Offline/Connectivity Strategy)
 
 A public installation should not completely stop functioning because of
 a temporary internet outage.
 
-------------------------------------------------------------------------
+---
 
-# 18. Thermal Printer Architecture
+## 18. Thermal Printer Architecture
 
 The printer is a **thermal printer**, not a traditional photo printer.
 
@@ -1131,9 +1131,9 @@ Thermal Printer
 
 Do not make the browser directly responsible for printer management.
 
-------------------------------------------------------------------------
+---
 
-# 19. Thermal Print Design
+## 19. Thermal Print Design
 
 The thermal printer should print a receipt/ticket rather than attempt to
 reproduce a high-quality photograph.
@@ -1142,7 +1142,7 @@ Example:
 
 ``` text
 ================================
-        ECO PHOTOBOOTH
+        ECOMEMORIES
 ================================
 
        RECYCLING REWARD
@@ -1155,7 +1155,7 @@ Photo Credits Earned:  1
 Thank you for helping
 reduce waste!
 
---------------------------------
+---
 
           [ QR CODE ]
 
@@ -1175,27 +1175,27 @@ Example concept:
 
 The actual URL structure should be decided during implementation.
 
-------------------------------------------------------------------------
+---
 
-# 20. Why Thermal Printing Is Useful
+## 20. Why Thermal Printing Is Useful
 
 The thermal receipt can contain:
 
--   Session/reference number
--   Number of items collected
--   Estimated weight
--   Reward earned
--   QR code
--   Digital photo reference
--   Environmental message
--   Timestamp
+- Session/reference number
+- Number of items collected
+- Estimated weight
+- Reward earned
+- QR code
+- Digital photo reference
+- Environmental message
+- Timestamp
 
 This makes the physical printout useful without requiring an expensive
 photo printer.
 
-------------------------------------------------------------------------
+---
 
-# 21. Local Print Service
+## 21. Local Print Service
 
 The print service should run on the photobooth laptop.
 
@@ -1227,9 +1227,9 @@ Report result
 
 Laravel should not need to understand low-level printer commands.
 
-------------------------------------------------------------------------
+---
 
-# 22. Camera Architecture
+## 22. Camera Architecture
 
 Use the browser camera API.
 
@@ -1249,25 +1249,25 @@ Image
 
 Initial features:
 
--   Camera preview
--   Countdown
--   Capture
--   Retake
--   Confirm
+- Camera preview
+- Countdown
+- Capture
+- Retake
+- Confirm
 
 Do not start with:
 
--   AI filters
--   Complex image effects
--   Face detection
--   Video
--   GIFs
+- AI filters
+- Complex image effects
+- Face detection
+- Video
+- GIFs
 
 Build the reliable basic flow first.
 
-------------------------------------------------------------------------
+---
 
-# 23. QR Code Strategy
+## 23. QR Code Strategy
 
 QR can eventually be used for:
 
@@ -1298,9 +1298,9 @@ User
 Start with photo retrieval because it directly supports the thermal
 receipt.
 
-------------------------------------------------------------------------
+---
 
-# 24. Admin Dashboard
+## 24. Admin Dashboard
 
 The admin dashboard should eventually show:
 
@@ -1318,7 +1318,7 @@ Print Jobs
 Example:
 
 ``` text
-ECO PHOTOBOOTH ADMIN
+ECOMEMORIES ADMIN
 
 Deposits                 12,450
 Collected Weight          186.2 KG
@@ -1332,9 +1332,9 @@ TRASH-002                 ONLINE
 TRASH-003                 OFFLINE
 ```
 
-------------------------------------------------------------------------
+---
 
-# 25. Environmental Analytics
+## 25. Environmental Analytics
 
 Track:
 
@@ -1358,25 +1358,25 @@ device uptime
 
 The statistics should be based on actual database records.
 
-------------------------------------------------------------------------
+---
 
-# 26. Development Phases
+## 26. Development Phases
 
-## Phase 0 --- Planning
+### Phase 0 --- Planning
 
-### Goal
+### Goal (Development Phases)
 
 Define the system before writing major code.
 
 ### Tasks
 
--   Define requirements
--   Define user flow
--   Define reward rules
--   Define hardware assumptions
--   Define database entities
--   Define API boundaries
--   Create architecture documentation
+- Define requirements
+- Define user flow
+- Define reward rules
+- Define hardware assumptions
+- Define database entities
+- Define API boundaries
+- Create architecture documentation
 
 ### Deliverable
 
@@ -1387,11 +1387,11 @@ docs/
 └── development-roadmap.md
 ```
 
-------------------------------------------------------------------------
+---
 
-# Phase 1 --- Project Foundation
+### Phase 1 --- Project Foundation
 
-### Goal
+### Goal (Development Phases)
 
 Create the application skeleton.
 
@@ -1407,13 +1407,13 @@ PostgreSQL
 
 ### Tasks
 
--   Create Git repository
--   Create Laravel backend
--   Create React frontend
--   Configure PostgreSQL
--   Configure environment variables
--   Establish API communication
--   Establish local development workflow
+- Create Git repository
+- Create Laravel backend
+- Create React frontend
+- Configure PostgreSQL
+- Configure environment variables
+- Establish API communication
+- Establish local development workflow
 
 ### Deliverable
 
@@ -1423,22 +1423,22 @@ React → Laravel → PostgreSQL
 
 works successfully.
 
-------------------------------------------------------------------------
+---
 
-# Phase 2 --- Database & Sessions
+### Phase 2 --- Database & Sessions
 
-### Goal
+### Goal (Development Phases)
 
 Create the foundation for users and photobooth sessions.
 
 ### Tasks
 
--   Create migrations
--   Create Eloquent models
--   Create relationships
--   Create session API
--   Create session status
--   Add basic validation
+- Create migrations
+- Create Eloquent models
+- Create relationships
+- Create session API
+- Create session status
+- Add basic validation
 
 ### Deliverable
 
@@ -1448,21 +1448,21 @@ A user can start:
 Session ABC123
 ```
 
-------------------------------------------------------------------------
+---
 
-# Phase 3 --- Deposit System
+### Phase 3 --- Deposit System
 
-### Goal
+### Goal (Development Phases)
 
 Implement deposits without hardware.
 
 ### Tasks
 
--   Create deposit endpoint
--   Create simulated deposit button
--   Record deposit
--   Validate deposit
--   Display progress
+- Create deposit endpoint
+- Create simulated deposit button
+- Record deposit
+- Validate deposit
+- Display progress
 
 Example:
 
@@ -1480,22 +1480,22 @@ Example:
 
 The complete deposit workflow works without hardware.
 
-------------------------------------------------------------------------
+---
 
-# Phase 4 --- Reward Engine
+### Phase 4 --- Reward Engine
 
-### Goal
+### Goal (Development Phases)
 
 Automatically award photo credits.
 
 ### Tasks
 
--   Implement reward service
--   Configure deposit threshold
--   Create reward records
--   Create credit records
--   Prevent duplicate rewards
--   Add tests
+- Implement reward service
+- Configure deposit threshold
+- Create reward records
+- Create credit records
+- Prevent duplicate rewards
+- Add tests
 
 ### Deliverable
 
@@ -1505,44 +1505,44 @@ Automatically award photo credits.
 1 photo credit
 ```
 
-------------------------------------------------------------------------
+---
 
-# Phase 5 --- Photobooth
+### Phase 5 --- Photobooth
 
-### Goal
+### Goal (Development Phases)
 
 Build the actual camera experience.
 
 ### Tasks
 
--   Camera permission
--   Camera preview
--   Countdown
--   Capture
--   Preview
--   Retake
--   Confirm
--   Photo metadata
+- Camera permission
+- Camera preview
+- Countdown
+- Capture
+- Preview
+- Retake
+- Confirm
+- Photo metadata
 
 ### Deliverable
 
 A user with a valid credit can take a photo.
 
-------------------------------------------------------------------------
+---
 
-# Phase 6 --- Photo Storage
+### Phase 6 --- Photo Storage
 
-### Goal
+### Goal (Development Phases)
 
 Persist digital photos.
 
 ### Tasks
 
--   Configure storage
--   Upload image
--   Create photo record
--   Generate photo reference
--   Build photo view page
+- Configure storage
+- Upload image
+- Create photo record
+- Generate photo reference
+- Build photo view page
 
 ### Recommended
 
@@ -1560,23 +1560,23 @@ Database reference
 Digital photo page
 ```
 
-------------------------------------------------------------------------
+---
 
-# Phase 7 --- Thermal Printer
+### Phase 7 --- Thermal Printer
 
-### Goal
+### Goal (Development Phases)
 
 Print a physical reward ticket.
 
 ### Tasks
 
--   Create print job model
--   Create local print service
--   Connect thermal printer
--   Generate receipt
--   Generate QR code
--   Print test receipt
--   Add print status
+- Create print job model
+- Create local print service
+- Connect thermal printer
+- Generate receipt
+- Generate QR code
+- Print test receipt
+- Add print status
 
 ### Deliverable
 
@@ -1590,11 +1590,11 @@ QR code
 Digital photo
 ```
 
-------------------------------------------------------------------------
+---
 
-# Phase 8 --- Device Simulator
+### Phase 8 --- Device Simulator
 
-### Goal
+### Goal (Development Phases)
 
 Create a realistic replacement for Arduino.
 
@@ -1620,11 +1620,11 @@ Payload:
 
 The backend can be tested independently of physical hardware.
 
-------------------------------------------------------------------------
+---
 
-# Phase 9 --- Arduino + Laptop
+### Phase 9 --- Arduino + Laptop
 
-### Goal
+### Goal (Development Phases)
 
 Connect the first physical device.
 
@@ -1640,35 +1640,35 @@ Laravel
 
 ### Tasks
 
--   Arduino firmware
--   Serial protocol
--   Python serial listener
--   HTTP communication
--   Device authentication
--   Event IDs
--   Retry handling
--   Logging
+- Arduino firmware
+- Serial protocol
+- Python serial listener
+- HTTP communication
+- Device authentication
+- Event IDs
+- Retry handling
+- Logging
 
 ### Deliverable
 
 Pressing/detecting a physical Arduino event creates a Laravel deposit.
 
-------------------------------------------------------------------------
+---
 
-# Phase 10 --- IR Sensor
+### Phase 10 --- IR Sensor
 
-### Goal
+### Goal (Development Phases)
 
 Replace the physical test button with object detection.
 
 ### Tasks
 
--   Connect IR sensor
--   Detect object
--   Debounce sensor
--   Prevent multiple counts
--   Send deposit event
--   Test false positives
+- Connect IR sensor
+- Detect object
+- Debounce sensor
+- Prevent multiple counts
+- Send deposit event
+- Test false positives
 
 ### Deliverable
 
@@ -1682,11 +1682,11 @@ Arduino
 Laravel
 ```
 
-------------------------------------------------------------------------
+---
 
-# Phase 11 --- Weight Validation
+### Phase 11 --- Weight Validation
 
-### Goal
+### Goal (Development Phases)
 
 Improve deposit validation.
 
@@ -1700,12 +1700,12 @@ HX711
 
 ### Tasks
 
--   Read weight
--   Calibrate load cell
--   Define minimum weight
--   Combine IR + weight events
--   Reject invalid deposits
--   Record measured weight
+- Read weight
+- Calibrate load cell
+- Define minimum weight
+- Combine IR + weight events
+- Reject invalid deposits
+- Record measured weight
 
 ### Deliverable
 
@@ -1717,11 +1717,11 @@ Valid weight
 Valid deposit
 ```
 
-------------------------------------------------------------------------
+---
 
-# Phase 12 --- Realtime
+### Phase 12 --- Realtime
 
-### Goal
+### Goal (Development Phases)
 
 Remove manual refreshing.
 
@@ -1733,12 +1733,12 @@ Laravel Reverb
 
 ### Tasks
 
--   Create Laravel events
--   Configure broadcasting
--   Subscribe React
--   Update deposit progress
--   Display reward notification
--   Display device status
+- Create Laravel events
+- Configure broadcasting
+- Subscribe React
+- Update deposit progress
+- Display reward notification
+- Display device status
 
 ### Deliverable
 
@@ -1754,32 +1754,32 @@ Reverb
 React updates instantly
 ```
 
-------------------------------------------------------------------------
+---
 
-# Phase 13 --- Redis & Queues
+### Phase 13 --- Redis & Queues
 
-### Goal
+### Goal (Development Phases)
 
 Introduce asynchronous processing where useful.
 
 ### Tasks
 
--   Configure Redis
--   Configure queues
--   Queue photo processing
--   Queue print jobs if necessary
--   Cache appropriate data
--   Add failed-job handling
+- Configure Redis
+- Configure queues
+- Queue photo processing
+- Queue print jobs if necessary
+- Cache appropriate data
+- Add failed-job handling
 
 ### Deliverable
 
 Long-running operations do not block the main request unnecessarily.
 
-------------------------------------------------------------------------
+---
 
-# Phase 14 --- ESP32
+### Phase 14 --- ESP32
 
-### Goal
+### Goal (Development Phases)
 
 Remove the laptop dependency from the recycling device.
 
@@ -1793,43 +1793,43 @@ Laravel
 
 ### Tasks
 
--   ESP32 networking
--   Device authentication
--   HTTP API
--   Retry logic
--   Offline event queue
--   Heartbeat
--   Device status
+- ESP32 networking
+- Device authentication
+- HTTP API
+- Retry logic
+- Offline event queue
+- Heartbeat
+- Device status
 
 ### Deliverable
 
 The physical trashcan can operate as an independent networked device.
 
-------------------------------------------------------------------------
+---
 
-# Phase 15 --- Admin Dashboard
+### Phase 15 --- Admin Dashboard
 
-### Goal
+### Goal (Development Phases)
 
 Manage and monitor the installation.
 
 ### Tasks
 
--   Dashboard
--   Device list
--   Device status
--   Deposit statistics
--   Weight statistics
--   Reward statistics
--   Photo statistics
--   Print status
--   Session history
+- Dashboard
+- Device list
+- Device status
+- Deposit statistics
+- Weight statistics
+- Reward statistics
+- Photo statistics
+- Print status
+- Session history
 
-------------------------------------------------------------------------
+---
 
-# Phase 16 --- Physical Trashcan
+### Phase 16 --- Physical Trashcan
 
-### Goal
+### Goal (Development Phases)
 
 Build the actual enclosure/mechanism.
 
@@ -1852,36 +1852,36 @@ Power supply
 
 A complete physical recycling station.
 
-------------------------------------------------------------------------
+---
 
-# Phase 17 --- Hardening
+### Phase 17 --- Hardening
 
-### Goal
+### Goal (Development Phases)
 
 Prepare for real-world use.
 
 ### Tasks
 
--   Device authentication
--   API rate limiting
--   Duplicate event prevention
--   Input validation
--   Logging
--   Error handling
--   Offline handling
--   Database backups
--   Photo retention policy
--   Security review
--   Printer failure handling
--   Sensor failure handling
+- Device authentication
+- API rate limiting
+- Duplicate event prevention
+- Input validation
+- Logging
+- Error handling
+- Offline handling
+- Database backups
+- Photo retention policy
+- Security review
+- Printer failure handling
+- Sensor failure handling
 
-------------------------------------------------------------------------
+---
 
-# 27. Failure Scenarios
+## 27. Failure Scenarios
 
 The system should eventually handle:
 
-## Internet unavailable
+### Internet unavailable
 
 ``` text
 Store event locally
@@ -1889,7 +1889,7 @@ Store event locally
 Retry later
 ```
 
-## Laravel unavailable
+### Laravel unavailable
 
 ``` text
 Device stores event
@@ -1897,7 +1897,7 @@ Device stores event
 Retry
 ```
 
-## Duplicate event
+### Duplicate event
 
 ``` text
 event_id already exists
@@ -1905,7 +1905,7 @@ event_id already exists
 Ignore duplicate
 ```
 
-## Printer unavailable
+### Printer unavailable
 
 ``` text
 Photo saved
@@ -1915,7 +1915,7 @@ Print job = pending
 Retry
 ```
 
-## Sensor malfunction
+### Sensor malfunction
 
 ``` text
 Invalid readings
@@ -1925,13 +1925,13 @@ Device warning
 Admin notification
 ```
 
-------------------------------------------------------------------------
+---
 
-# 28. Testing Strategy
+## 28. Testing Strategy
 
 Testing should happen at multiple levels.
 
-## Unit Tests
+### Unit Tests
 
 Test:
 
@@ -1950,7 +1950,7 @@ When reward evaluation runs
 Then 1 photo credit is created
 ```
 
-## Feature/API Tests
+### Feature/API Tests
 
 Test:
 
@@ -1961,7 +1961,7 @@ GET /api/sessions/{id}
 POST /api/photos
 ```
 
-## Frontend Tests
+### Frontend Tests
 
 Test:
 
@@ -1973,7 +1973,7 @@ Camera flow
 Photo confirmation
 ```
 
-## Hardware Tests
+### Hardware Tests
 
 Test:
 
@@ -1985,27 +1985,27 @@ Duplicate events
 Weight readings
 ```
 
-------------------------------------------------------------------------
+---
 
-# 29. Security Considerations
+## 29. Security Considerations
 
 Important areas:
 
--   Validate every API request.
--   Authenticate devices.
--   Never expose device secrets in the React application.
--   Use environment variables for secrets.
--   Rate-limit device endpoints.
--   Prevent duplicate event processing.
--   Validate uploaded photos.
--   Restrict storage access where appropriate.
--   Use HTTPS in production.
--   Keep Laravel and dependencies updated.
--   Do not trust sensor-provided values blindly.
+- Validate every API request.
+- Authenticate devices.
+- Never expose device secrets in the React application.
+- Use environment variables for secrets.
+- Rate-limit device endpoints.
+- Prevent duplicate event processing.
+- Validate uploaded photos.
+- Restrict storage access where appropriate.
+- Use HTTPS in production.
+- Keep Laravel and dependencies updated.
+- Do not trust sensor-provided values blindly.
 
-------------------------------------------------------------------------
+---
 
-# 30. Repository Structure
+## 30. Repository Structure
 
 Recommended starting structure:
 
@@ -2044,9 +2044,9 @@ eco-photobooth/
 └── docker-compose.yml
 ```
 
-------------------------------------------------------------------------
+---
 
-# 31. Documentation Strategy
+## 31. Documentation Strategy
 
 Maintain documentation as the project evolves.
 
@@ -2097,9 +2097,9 @@ Example:
 004-supabase-storage.md
 ```
 
-------------------------------------------------------------------------
+---
 
-# 32. Architecture Decision Records
+## 32. Architecture Decision Records
 
 For important decisions, document:
 
@@ -2140,13 +2140,13 @@ The project gains a strong backend boundary but
 requires Laravel hosting.
 ```
 
-------------------------------------------------------------------------
+---
 
-# 33. Cost-Control Strategy
+## 33. Cost-Control Strategy
 
 Do not purchase everything at the beginning.
 
-## Start with
+### Start with
 
 ``` text
 Laptop
@@ -2156,7 +2156,7 @@ React
 PostgreSQL
 ```
 
-## Then
+### Then
 
 ``` text
 Existing Arduino
@@ -2164,7 +2164,7 @@ Existing Arduino
 Basic sensor
 ```
 
-## Then
+### Then
 
 ``` text
 IR sensor
@@ -2174,13 +2174,13 @@ Load cell
 HX711
 ```
 
-## Then
+### Then
 
 ``` text
 Thermal printer
 ```
 
-## Later
+### Later
 
 ``` text
 ESP32
@@ -2195,21 +2195,21 @@ Servo/mechanism
 > Never purchase hardware to solve a problem that can currently be
 > simulated in software.
 
-------------------------------------------------------------------------
+---
 
-# 34. MVP Definition
+## 34. MVP Definition
 
 The first MVP does NOT require:
 
--   Arduino
--   ESP32
--   IR sensor
--   Load cell
--   Redis
--   MQTT
--   Realtime
--   Physical trashcan
--   Admin dashboard
+- Arduino
+- ESP32
+- IR sensor
+- Load cell
+- Redis
+- MQTT
+- Realtime
+- Physical trashcan
+- Admin dashboard
 
 The MVP only needs:
 
@@ -2241,85 +2241,85 @@ Display QR / Photo
 
 Once this works, the project has a functioning software core.
 
-------------------------------------------------------------------------
+---
 
-# 35. Recommended Milestones
+## 35. Recommended Milestones
 
-## Milestone 1
+### Milestone 1
 
 ``` text
 Laravel + React connected
 ```
 
-## Milestone 2
+### Milestone 2
 
 ``` text
 Session + Database
 ```
 
-## Milestone 3
+### Milestone 3
 
 ``` text
 5 deposits → 1 credit
 ```
 
-## Milestone 4
+### Milestone 4
 
 ``` text
 Camera → Photo
 ```
 
-## Milestone 5
+### Milestone 5
 
 ``` text
 Photo → Thermal Receipt
 ```
 
-## Milestone 6
+### Milestone 6
 
 ``` text
 Device Simulator → Laravel
 ```
 
-## Milestone 7
+### Milestone 7
 
 ``` text
 Arduino → Laptop → Laravel
 ```
 
-## Milestone 8
+### Milestone 8
 
 ``` text
 IR Sensor → Arduino
 ```
 
-## Milestone 9
+### Milestone 9
 
 ``` text
 IR + Load Cell
 ```
 
-## Milestone 10
+### Milestone 10
 
 ``` text
 Realtime + Redis
 ```
 
-## Milestone 11
+### Milestone 11
 
 ``` text
 ESP32 → Laravel
 ```
 
-## Milestone 12
+### Milestone 12
 
 ``` text
-Complete Physical EcoPhotoBooth
+Complete Physical EcoMemories
 ```
 
-------------------------------------------------------------------------
+---
 
-# 36. Final Target Architecture
+## 36. Final Target Architecture
 
 The final system should look approximately like:
 
@@ -2396,9 +2396,9 @@ The final system should look approximately like:
            └──────────────┘
 ```
 
-------------------------------------------------------------------------
+---
 
-# 37. Final Development Philosophy
+## 37. Final Development Philosophy
 
 The project should evolve in this order:
 
