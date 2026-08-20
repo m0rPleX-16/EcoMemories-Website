@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '@/lib/api';
 import type { Session as SessionType, DepositResponse } from '@/types';
@@ -14,7 +14,46 @@ import {
     CheckCircle2,
     History,
     ArrowUpRight,
+    Usb,
 } from 'lucide-react';
+
+// ─── Bridge Integration ───────────────────────────────────────────────────────
+
+/** Base URL of the local Node.js bridge. Falls back to localhost:3333. */
+const BRIDGE_URL = (import.meta.env.VITE_BRIDGE_URL as string | undefined) || 'http://localhost:3333';
+
+type HardwareStatus = 'connected' | 'offline' | 'unreachable';
+
+/**
+ * Register the active session with the local bridge (best-effort).
+ * If the bridge is not running, this silently does nothing.
+ */
+async function registerSessionWithBridge(sessionCode: string): Promise<void> {
+    try {
+        await fetch(`${BRIDGE_URL}/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_code: sessionCode }),
+            signal: AbortSignal.timeout(3000),
+        });
+    } catch {
+        // Bridge not running — kiosk continues normally.
+    }
+}
+
+/**
+ * Clear the active session from the bridge (best-effort).
+ */
+async function clearSessionFromBridge(): Promise<void> {
+    try {
+        await fetch(`${BRIDGE_URL}/session`, {
+            method: 'DELETE',
+            signal: AbortSignal.timeout(3000),
+        });
+    } catch {
+        // Ignore — bridge may not be running.
+    }
+}
 
 export default function SessionPage() {
     const { sessionCode } = useParams<{ sessionCode: string }>();
@@ -28,6 +67,10 @@ export default function SessionPage() {
     const [recentDeposit, setRecentDeposit] = useState(false);
 
     const requiredDeposits = RewardService.REQUIRED_DEPOSITS;
+
+    // Hardware status badge state
+    const [hardwareStatus, setHardwareStatus] = useState<HardwareStatus>('unreachable');
+    const statusPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const fetchSession = useCallback(async () => {
         if (!sessionCode) return;
@@ -48,6 +91,38 @@ export default function SessionPage() {
     useEffect(() => {
         fetchSession();
     }, [fetchSession]);
+
+    // Register / deregister session with the local hardware bridge.
+    useEffect(() => {
+        if (!sessionCode || loading) return;
+        registerSessionWithBridge(sessionCode);
+        return () => { clearSessionFromBridge(); };
+    }, [sessionCode, loading]);
+
+    // Poll bridge /status every 10 seconds for the hardware indicator badge.
+    useEffect(() => {
+        if (!sessionCode) return;
+
+        const pollStatus = async () => {
+            try {
+                const res = await fetch(`${BRIDGE_URL}/status`, {
+                    signal: AbortSignal.timeout(3000),
+                });
+                if (!res.ok) { setHardwareStatus('unreachable'); return; }
+                const data = await res.json();
+                setHardwareStatus(data.serial_connected ? 'connected' : 'offline');
+            } catch {
+                setHardwareStatus('unreachable');
+            }
+        };
+
+        pollStatus();
+        statusPollRef.current = setInterval(pollStatus, 10000);
+
+        return () => {
+            if (statusPollRef.current) clearInterval(statusPollRef.current);
+        };
+    }, [sessionCode]);
 
     // Kiosk safety: Auto-return to home after 3 minutes of inactivity
     useEffect(() => {
@@ -151,9 +226,21 @@ export default function SessionPage() {
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
                     SESSION #{session.session_code}
                 </span>
-                <span className="pill-gold">
-                    HARDWARE ACTIVE
-                </span>
+
+                {/* Hardware status badge — reflects bridge /status poll */}
+                {hardwareStatus === 'connected' && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-mono text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
+                        <Usb className="w-3 h-3" />
+                        Hardware Connected
+                    </span>
+                )}
+                {hardwareStatus === 'offline' && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 font-mono text-[10px] sm:text-[11px] font-bold uppercase tracking-wider">
+                        <Usb className="w-3 h-3" />
+                        Hardware Offline
+                    </span>
+                )}
+                {/* unreachable = bridge not running — show nothing, kiosk is in software-only mode */}
             </div>
 
             {/* Progress Ring */}
