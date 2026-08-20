@@ -72,10 +72,12 @@ class PhotoController extends Controller
         Storage::disk('public')->put($storagePath, $imageData);
 
         // Create photo record
+        // Use a relative path for public_url so the image resolves correctly from any host
+        // (e.g. Cloudflare Tunnel, staging, production) without depending on APP_URL.
         $photo = Photo::create([
             'photo_session_id' => $photoSession->id,
             'storage_path' => $storagePath,
-            'public_url' => Storage::disk('public')->url($storagePath),
+            'public_url' => '/storage/' . $storagePath,
             'reference_code' => $referenceCode,
         ]);
 

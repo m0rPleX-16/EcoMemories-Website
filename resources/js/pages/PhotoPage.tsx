@@ -29,6 +29,7 @@ export default function PhotoPage() {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [deleted, setDeleted] = useState(false);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!reference) return;
@@ -69,7 +70,52 @@ export default function PhotoPage() {
     };
 
     const handlePrint = () => {
-        window.print();
+        const imageUrl = photo?.public_url || (photo ? `/storage/${photo.storage_path}` : '');
+        const referenceCode = photo?.reference_code || '';
+        const capturedDate = photo ? new Date(photo.created_at).toLocaleDateString('en-US', {
+            year: 'numeric', month: 'long', day: 'numeric',
+        }) : '';
+
+        const printWindow = window.open('', '_blank', 'width=400,height=700');
+        if (!printWindow) return;
+
+        printWindow.document.write(`
+<!DOCTYPE html>
+<html>
+<head>
+  <title>EcoMemories – ${referenceCode}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #fff; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; padding: 24px 16px; }
+    .header { text-align: center; border-bottom: 2px dashed #ccc; padding-bottom: 12px; margin-bottom: 16px; width: 100%; }
+    .brand { font-size: 18px; font-weight: bold; letter-spacing: 2px; }
+    .sub { font-size: 10px; letter-spacing: 3px; color: #666; margin-top: 2px; }
+    img { max-width: 300px; width: 100%; border: 1px solid #ddd; display: block; }
+    .footer { text-align: center; border-top: 2px dashed #ccc; padding-top: 12px; margin-top: 16px; width: 100%; font-size: 10px; color: #444; line-height: 1.8; }
+    .ref { font-weight: bold; font-size: 12px; letter-spacing: 1px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">ECOMEMORIES</div>
+    <div class="sub">RECYCLING REWARD RECEIPT</div>
+  </div>
+  <img src="${imageUrl}" alt="EcoMemories Photostrip ${referenceCode}" />
+  <div class="footer">
+    <div class="ref">REF: ${referenceCode}</div>
+    <div>${capturedDate}</div>
+    <div style="margin-top:8px;">5 Items Recycled • 1 Photo Credit Earned</div>
+    <div style="margin-top:4px;font-style:italic;">Thank you for helping reduce waste.</div>
+  </div>
+</body>
+</html>`);
+
+        printWindow.document.close();
+        printWindow.focus();
+        setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 300);
     };
 
     const handleDeletePhoto = async () => {
@@ -83,7 +129,7 @@ export default function PhotoPage() {
             }
         } catch (err) {
             console.error('Failed to delete photo:', err);
-            alert('Failed to delete photo. Please try again or contact support.');
+            setDeleteError('Failed to delete photo. Please try again or contact support.');
         } finally {
             setDeleting(false);
         }
@@ -250,7 +296,7 @@ export default function PhotoPage() {
                 <div className="fixed inset-0 z-50 bg-[#08291B]/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
                     <div className="editorial-card p-6 sm:p-8 max-w-md w-full animate-scale-in relative">
                         <button
-                            onClick={() => setShowDeleteModal(false)}
+                            onClick={() => { setShowDeleteModal(false); setDeleteError(null); }}
                             className="absolute top-4 right-4 text-[#83948C] hover:text-[#0E3E2B]"
                         >
                             <X className="w-5 h-5" />
@@ -266,6 +312,13 @@ export default function PhotoPage() {
                         <p className="text-xs sm:text-sm text-[#52635C] leading-relaxed mb-6">
                             This action will permanently delete photostrip <strong>{photo.reference_code}</strong> from our storage disk. Anyone with the QR code or URL will no longer be able to access it.
                         </p>
+
+                        {deleteError && (
+                            <div className="flex items-start gap-2 mb-4 px-3 py-2.5 rounded-xl bg-[#FBF3DC] border border-[#E5D6A8] text-[#8C6D1F]">
+                                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                <p className="text-xs font-mono leading-relaxed">{deleteError}</p>
+                            </div>
+                        )}
 
                         <div className="flex flex-col sm:flex-row items-center gap-3">
                             <button
@@ -286,7 +339,7 @@ export default function PhotoPage() {
                                 )}
                             </button>
                             <button
-                                onClick={() => setShowDeleteModal(false)}
+                                onClick={() => { setShowDeleteModal(false); setDeleteError(null); }}
                                 disabled={deleting}
                                 className="w-full sm:w-1/2 py-3 px-4 rounded-xl border border-[#E8E3D5] bg-white hover:bg-[#FAF8F5] text-[#52635C] font-semibold text-xs uppercase tracking-wider transition-all"
                             >

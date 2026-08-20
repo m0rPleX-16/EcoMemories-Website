@@ -23,6 +23,7 @@ export default function ResultPage() {
     const [lightboxOpen, setLightboxOpen] = useState(false);
 
     const photo = state?.photo;
+    const photoSession = state?.photoSession;
 
     if (!photo) {
         return (
@@ -180,12 +181,22 @@ export default function ResultPage() {
                             <span className="font-bold text-[#0E3E2B]">4-Pose Souvenir Strip</span>
                         </div>
                         <div className="flex justify-between py-1 border-b border-dotted border-[#E6DDC8] text-[11px] sm:text-xs">
+                            <span>Session:</span>
+                            <span className="font-bold text-[#0E3E2B] font-mono tracking-wider">
+                                {photoSession?.session_id ? `#${String(photoSession.session_id).padStart(4,'0')}` : '—'}
+                            </span>
+                        </div>
+                        <div className="flex justify-between py-1 border-b border-dotted border-[#E6DDC8] text-[11px] sm:text-xs">
                             <span>Reference Code:</span>
                             <span className="font-bold text-[#C5A059]">{photo.reference_code}</span>
                         </div>
                         <div className="text-center pt-2">
                             <p className="font-serif-editorial italic text-xs sm:text-sm text-[#0E3E2B]">Thank you for helping reduce waste.</p>
-                            <p className="text-[9px] sm:text-[10px] text-[#83948C] mt-0.5">{new Date().toLocaleString()}</p>
+                            <p className="text-[9px] sm:text-[10px] text-[#83948C] mt-0.5">
+                            {photo.created_at
+                                ? new Date(photo.created_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
+                                : new Date().toLocaleString()}
+                        </p>
                         </div>
                     </div>
                 </div>

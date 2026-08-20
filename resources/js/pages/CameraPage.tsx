@@ -29,6 +29,30 @@ import {
     ArrowUpRight,
 } from 'lucide-react';
 
+// ─── Bridge Integration ───────────────────────────────────────────────────────
+
+const BRIDGE_URL = (import.meta.env.VITE_BRIDGE_URL as string | undefined) || 'http://localhost:3333';
+
+async function registerSessionWithBridge(sessionCode: string): Promise<void> {
+    try {
+        await fetch(`${BRIDGE_URL}/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_code: sessionCode }),
+            signal: AbortSignal.timeout(3000),
+        });
+    } catch { /* bridge not running — continue normally */ }
+}
+
+async function clearSessionFromBridge(): Promise<void> {
+    try {
+        await fetch(`${BRIDGE_URL}/session`, {
+            method: 'DELETE',
+            signal: AbortSignal.timeout(3000),
+        });
+    } catch { /* ignore */ }
+}
+
 const POSE_PROMPTS = [
     { title: 'Pose 1 of 4', subtitle: 'Big Smile for the Planet', icon: Smile },
     { title: 'Pose 2 of 4', subtitle: 'Thumbs Up for Recycling', icon: ThumbsUp },
@@ -138,6 +162,15 @@ export default function CameraPage() {
         };
     }, [startCamera, photoSessionId, sessionCode, navigate]);
 
+    // Keep bridge in sync with the active session while CameraPage is mounted.
+    // SessionPage clears the bridge session on unmount — re-register it here
+    // so Arduino deposits during the photo session are still credited.
+    useEffect(() => {
+        if (!sessionCode) return;
+        registerSessionWithBridge(sessionCode);
+        return () => { clearSessionFromBridge(); };
+    }, [sessionCode]);
+
     // Capture a single frame from video
     const grabFrame = useCallback((): string => {
         const video = videoRef.current;
@@ -198,7 +231,7 @@ export default function CameraPage() {
                 }
             }
         }, 1000);
-    }, [grabFrame, retakeTargetIndex]);
+    }, [grabFrame, retakeTargetIndex]); // retakeTargetIndex must be in deps to avoid stale closure
 
     // Start 4-shot sequence
     const startBoothSequence = () => {
@@ -609,10 +642,16 @@ export default function CameraPage() {
 
                             {/* Final Action Buttons */}
                             <div className="pt-2">
+                                {error && (
+                                    <div className="flex items-start gap-2 mb-3 px-3 py-2.5 rounded-xl bg-[#FBF3DC] border border-[#E5D6A8] text-[#8C6D1F]">
+                                        <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                        <p className="text-xs font-mono leading-relaxed">{error}</p>
+                                    </div>
+                                )}
                                 <button
                                     id="confirm-btn"
                                     onClick={confirmAndSave}
-                                    disabled={boothState === 'uploading'}
+                                    disabled={boothState === 'uploading' || compositing}
                                     className="btn-primary w-full py-3.5 text-sm sm:text-base"
                                 >
                                     {boothState === 'uploading' ? (
