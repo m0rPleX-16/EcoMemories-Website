@@ -243,7 +243,8 @@ bool sendDepositToLaravel(String sessionCode, float weight) {
         DeserializationError err = deserializeJson(respDoc, response);
         if (!err) {
             bool rewardEarned = respDoc["reward_earned"] | false;
-            sessionDepositCount = respDoc["session"]["deposits"] | (sessionDepositCount + 1);
+            int deposits = respDoc["session"]["deposits"] | (sessionDepositCount + 1);
+            sessionDepositCount = deposits;
 
             if (rewardEarned) {
                 Serial.println("[API] ★ REWARD EARNED! Session photo credit unlocked.");
@@ -284,7 +285,11 @@ void handleStatus() {
     doc["device_id"] = DEVICE_ID;
     doc["status"] = "online";
     doc["active"] = hasActiveSession;
-    doc["session_code"] = hasActiveSession ? activeSessionCode : nullptr;
+    if (hasActiveSession) {
+        doc["session_code"] = activeSessionCode;
+    } else {
+        doc["session_code"] = "";
+    }
     doc["wifi_connected"] = (WiFi.status() == WL_CONNECTED);
     doc["ip"] = WiFi.localIP().toString();
     doc["deposits_this_session"] = sessionDepositCount;
@@ -352,9 +357,15 @@ void handlePrint() {
         return;
     }
 
-    String refCode = doc["reference_code"] | "ECO-00000";
-    String photoUrl = doc["photo_url"] | ("https://ecomemories.local/photo/" + refCode);
-    String sessionCode = doc["session_code"] | activeSessionCode;
+    String refCode = doc["reference_code"].as<String>();
+    if (refCode.length() == 0) refCode = "ECO-00000";
+
+    String photoUrl = doc["photo_url"].as<String>();
+    if (photoUrl.length() == 0) photoUrl = "https://ecomemories.local/photo/" + refCode;
+
+    String sessionCode = doc["session_code"].as<String>();
+    if (sessionCode.length() == 0) sessionCode = activeSessionCode;
+
     int itemsRecycled = doc["items_recycled"] | 5;
 
     printEcoReceipt(refCode, photoUrl, sessionCode, itemsRecycled);
