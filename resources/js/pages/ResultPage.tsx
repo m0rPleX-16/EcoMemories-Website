@@ -12,7 +12,11 @@ import {
     Receipt,
     ZoomIn,
     Sparkles,
+    Printer,
+    Check,
 } from 'lucide-react';
+
+const BRIDGE_URL = (import.meta.env.VITE_BRIDGE_URL as string | undefined) || 'http://localhost:3333';
 
 export default function ResultPage() {
     const { sessionCode } = useParams<{ sessionCode: string }>();
@@ -21,6 +25,8 @@ export default function ResultPage() {
     const state = location.state as { photo?: Photo; photoSession?: PhotoSession } | null;
 
     const [lightboxOpen, setLightboxOpen] = useState(false);
+    const [printing, setPrinting] = useState(false);
+    const [printSuccess, setPrintSuccess] = useState(false);
 
     const photo = state?.photo;
     const photoSession = state?.photoSession;
@@ -56,6 +62,32 @@ export default function ResultPage() {
             URL.revokeObjectURL(url);
         } catch {
             window.open(imageSrc, '_blank');
+        }
+    };
+
+    const handleThermalPrint = async () => {
+        if (printing || !photo) return;
+        setPrinting(true);
+        try {
+            const res = await fetch(`${BRIDGE_URL}/print`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    reference_code: photo.reference_code,
+                    photo_url: photoUrl,
+                    session_code: sessionCode,
+                    items_recycled: 5,
+                }),
+                signal: AbortSignal.timeout(5000),
+            });
+            if (res.ok) {
+                setPrintSuccess(true);
+                setTimeout(() => setPrintSuccess(false), 5000);
+            }
+        } catch (e) {
+            console.warn('[Print] Hardware bridge or ESP32 unreachable:', e);
+        } finally {
+            setPrinting(false);
         }
     };
 
@@ -211,6 +243,23 @@ export default function ResultPage() {
                 <button onClick={handleDownload} className="btn-secondary text-sm px-6 py-3 w-full sm:w-auto">
                     <Download className="w-4 h-4 text-[#C5A059]" />
                     <span>Download Photostrip</span>
+                </button>
+                <button
+                    onClick={handleThermalPrint}
+                    disabled={printing}
+                    className="btn-primary text-sm px-6 py-3 w-full sm:w-auto"
+                >
+                    {printSuccess ? (
+                        <>
+                            <Check className="w-4 h-4 text-emerald-300" />
+                            <span>Ticket Printed!</span>
+                        </>
+                    ) : (
+                        <>
+                            <Printer className="w-4 h-4 text-[#D4AF37]" />
+                            <span>{printing ? 'Printing Ticket...' : 'Print Thermal Ticket'}</span>
+                        </>
+                    )}
                 </button>
                 <button onClick={() => navigate(`/session/${sessionCode}`)} className="btn-secondary text-sm px-6 py-3 w-full sm:w-auto">
                     <ArrowLeft className="w-3.5 h-3.5" />

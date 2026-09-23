@@ -26,3 +26,8 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 cloudflared.exe
+
+
+# Laravel IDE Helper
+_ide_helper_models.php
+.phpstorm.meta.php

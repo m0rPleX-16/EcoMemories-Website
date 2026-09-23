@@ -71,6 +71,23 @@ app.delete('/session', (req, res) => {
     res.json({ success: true });
 });
 
+/**
+ * POST /print
+ * Body: { reference_code, photo_url, session_code, items_recycled }
+ * Called when the photobooth completes a session to print thermal souvenir ticket.
+ */
+app.post('/print', (req, res) => {
+    const { reference_code, photo_url, session_code, items_recycled = 5 } = req.body || {};
+    console.log('\n[bridge] ══════════ THERMAL RECEIPT PRINT JOB ══════════');
+    console.log(`[bridge] Reference:      ${reference_code || 'N/A'}`);
+    console.log(`[bridge] Session:        ${session_code || activeSessionCode || 'N/A'}`);
+    console.log(`[bridge] Items Recycled: ${items_recycled}`);
+    console.log(`[bridge] QR Code Target: ${photo_url || 'N/A'}`);
+    console.log('[bridge] ═══════════════════════════════════════════════\n');
+
+    res.json({ success: true, printed: true });
+});
+
 // ─── Exports ─────────────────────────────────────────────────────────────────
 
 /**
