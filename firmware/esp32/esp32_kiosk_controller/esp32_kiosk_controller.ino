@@ -18,10 +18,17 @@
 #include "HX711.h"
 #include "config.h"
 
+// Compatibility between ArduinoJson v6 and v7
+#if defined(ARDUINOJSON_VERSION_MAJOR) && ARDUINOJSON_VERSION_MAJOR >= 7
+    #define JSON_DOC(name, size) JsonDocument name
+#else
+    #define JSON_DOC(name, size) StaticJsonDocument<size> name
+#endif
+
 // ─── Peripheral Instances ─────────────────────────────────────────────────────
 
 WebServer server(LOCAL_SERVER_PORT);
-HardwareSerial printerSerial(2); // UART2: RX2 (GPIO 16), TX2 (GPIO 17)
+#define printerSerial Serial2 // Use built-in ESP32 HardwareSerial 2
 HX711 scale;
 
 // ─── State Management ────────────────────────────────────────────────────────
@@ -210,7 +217,7 @@ bool sendDepositToLaravel(String sessionCode, float weight) {
     // Generate unique event ID
     String eventId = "evt_" + String((uint32_t)ESP.getEfuseMac(), HEX) + "_" + String(millis());
 
-    StaticJsonDocument<256> doc;
+    JSON_DOC(doc, 256);
     doc["device_id"] = DEVICE_ID;
     doc["event"] = "deposit";
     doc["event_id"] = eventId;
@@ -232,7 +239,7 @@ bool sendDepositToLaravel(String sessionCode, float weight) {
         String response = http.getString();
         Serial.printf("[API] ✓ Success (%d): %s\n", httpCode, response.c_str());
 
-        StaticJsonDocument<512> respDoc;
+        JSON_DOC(respDoc, 512);
         DeserializationError err = deserializeJson(respDoc, response);
         if (!err) {
             bool rewardEarned = respDoc["reward_earned"] | false;
@@ -273,7 +280,7 @@ void handleOptions() {
 
 void handleStatus() {
     handleCors();
-    StaticJsonDocument<256> doc;
+    JSON_DOC(doc, 256);
     doc["device_id"] = DEVICE_ID;
     doc["status"] = "online";
     doc["active"] = hasActiveSession;
@@ -296,7 +303,7 @@ void handlePostSession() {
         return;
     }
 
-    StaticJsonDocument<128> doc;
+    JSON_DOC(doc, 128);
     DeserializationError err = deserializeJson(doc, server.arg("plain"));
     if (err || !doc.containsKey("session_code")) {
         server.send(422, "application/json", "{\"error\":\"session_code is required\"}");
@@ -312,7 +319,7 @@ void handlePostSession() {
     Serial.println("[BRIDGE] ✓ Active session registered: " + activeSessionCode);
     beepShort();
 
-    StaticJsonDocument<128> resp;
+    JSON_DOC(resp, 128);
     resp["success"] = true;
     resp["session_code"] = activeSessionCode;
 
@@ -338,7 +345,7 @@ void handlePrint() {
         return;
     }
 
-    StaticJsonDocument<512> doc;
+    JSON_DOC(doc, 512);
     DeserializationError err = deserializeJson(doc, server.arg("plain"));
     if (err) {
         server.send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
@@ -359,7 +366,7 @@ void handleSimulateDeposit() {
     handleCors();
     float weight = 18.5f;
     if (server.hasArg("plain")) {
-        StaticJsonDocument<128> doc;
+        JSON_DOC(doc, 128);
         if (!deserializeJson(doc, server.arg("plain")) && doc.containsKey("weight")) {
             weight = doc["weight"].as<float>();
         }
