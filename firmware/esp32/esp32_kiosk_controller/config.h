@@ -5,6 +5,11 @@
 //  EcoMemories ESP32 Firmware Configuration
 // ==============================================================================
 
+// --- 0. Hardware Feature Flags ---
+// 1 = Hardware module connected, 0 = Disabled (uses virtual/simulated fallback)
+#define ENABLE_WEIGHT_SENSOR   0    // 0 = Disabled (no load cell; deposit counts by sensor alone)
+#define ENABLE_THERMAL_PRINTER 0    // 0 = Disabled (no thermal printer; receipt outputs to Serial Monitor & screen)
+
 // --- 1. Wi-Fi Configuration ---
 #define WIFI_SSID             "YOUR_WIFI_SSID"
 #define WIFI_PASSWORD         "YOUR_WIFI_PASSWORD"

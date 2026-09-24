@@ -15,8 +15,12 @@
 #include <WebServer.h>
 #include <ArduinoJson.h>
 #include <HardwareSerial.h>
-#include "HX711.h"
+#include <mbedtls/base64.h>
 #include "config.h"
+
+#if ENABLE_WEIGHT_SENSOR
+#include "HX711.h"
+#endif
 
 // Compatibility between ArduinoJson v6 and v7
 #if defined(ARDUINOJSON_VERSION_MAJOR) && ARDUINOJSON_VERSION_MAJOR >= 7
@@ -28,8 +32,15 @@
 // ─── Peripheral Instances ─────────────────────────────────────────────────────
 
 WebServer server(LOCAL_SERVER_PORT);
+
+#if ENABLE_THERMAL_PRINTER
 #define printerSerial Serial2 // Use built-in ESP32 HardwareSerial 2
+#endif
+
+#if ENABLE_WEIGHT_SENSOR
 HX711 scale;
+bool hx711Ready = false;
+#endif
 
 // ─── State Management ────────────────────────────────────────────────────────
 
@@ -39,7 +50,6 @@ unsigned long lastDepositTime = 0;
 unsigned long lastSensorCheckTime = 0;
 int sessionDepositCount = 0;
 float lastMeasuredWeight = 0.0f;
-bool hx711Ready = false;
 
 // ─── Audio & Feedback Functions ───────────────────────────────────────────────
 
@@ -69,6 +79,7 @@ void beepError() {
 
 // ─── ESC/POS Thermal Printer Commands ─────────────────────────────────────────
 
+#if ENABLE_THERMAL_PRINTER
 void printerInit() {
     printerSerial.write(0x1B); // ESC @ (Initialize printer)
     printerSerial.write(0x40);
@@ -144,12 +155,26 @@ void printerPrintQRCode(const String& qrData) {
     printerSerial.write(printCmd, sizeof(printCmd));
     delay(100);
 }
+#endif
 
 /**
  * Formats and prints the complete EcoMemories souvenir receipt ticket
  */
 void printEcoReceipt(String refCode, String photoUrl, String sessionCode, int itemsRecycled) {
-    Serial.println("[PRINTER] Printing souvenir receipt for: " + refCode);
+    Serial.println("\n╔════════════════════════════════════════════════════╗");
+    Serial.println("║            ECOMEMORIES RECEIPT TICKET              ║");
+    Serial.println("╠════════════════════════════════════════════════════╣");
+    Serial.printf ("║ Reference:       %-34s║\n", refCode.c_str());
+    Serial.printf ("║ Session:         %-34s║\n", sessionCode.c_str());
+    Serial.printf ("║ Items Recycled:  %-34d║\n", itemsRecycled);
+    Serial.println("║ Reward Earned:   1 Photo Credit                    ║");
+    Serial.println("║ Format:          4-Pose Souvenir Strip             ║");
+    Serial.println("╟────────────────────────────────────────────────────╢");
+    Serial.printf ("║ Photo URL: %-40s║\n", photoUrl.c_str());
+    Serial.println("║ Scan the QR code on the kiosk screen to download!  ║");
+    Serial.println("╚════════════════════════════════════════════════════╝\n");
+
+#if ENABLE_THERMAL_PRINTER
     printerInit();
 
     // Header
@@ -192,6 +217,7 @@ void printEcoReceipt(String refCode, String photoUrl, String sessionCode, int it
     printerSerial.println("reduce waste!");
     printerFeed(3);
     printerCut();
+#endif
 }
 
 // ─── Laravel API Communication ────────────────────────────────────────────────
@@ -373,6 +399,65 @@ void handlePrint() {
     server.send(200, "application/json", "{\"success\":true,\"printed\":true}");
 }
 
+/**
+ * Streams raw ESC/POS dithered photostrip raster bitmap chunks from the tablet
+ */
+void handlePrintChunk() {
+    handleCors();
+    if (!server.hasArg("plain")) {
+        server.send(400, "application/json", "{\"error\":\"Missing body\"}");
+        return;
+    }
+
+    JSON_DOC(doc, 4096);
+    DeserializationError err = deserializeJson(doc, server.arg("plain"));
+    if (err) {
+        server.send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+        return;
+    }
+
+    const char* b64Data = doc["data"] | "";
+    bool isFirst = doc["is_first"] | false;
+    bool isLast = doc["is_last"] | false;
+    size_t b64Len = strlen(b64Data);
+
+#if ENABLE_THERMAL_PRINTER
+    if (isFirst) {
+        printerInit();
+        printerSetAlign(1); // Center
+        Serial.println("[PRINTER] ▶ Starting photostrip image print stream...");
+    }
+
+    if (b64Len > 0) {
+        size_t maxRawLen = (b64Len * 3) / 4 + 4;
+        uint8_t rawBuf[2048];
+        if (maxRawLen <= sizeof(rawBuf)) {
+            size_t outLen = 0;
+            int ret = mbedtls_base64_decode(rawBuf, sizeof(rawBuf), &outLen, (const unsigned char*)b64Data, b64Len);
+            if (ret == 0 && outLen > 0) {
+                printerSerial.write(rawBuf, outLen);
+            }
+        }
+    }
+
+    if (isLast) {
+        printerFeed(3);
+        printerCut();
+        Serial.println("[PRINTER] ✓ Photostrip printed and fed successfully.");
+    }
+#else
+    if (isFirst) {
+        Serial.println("[PRINTER-SIM] ▶ Starting simulated photostrip print stream...");
+    }
+    Serial.printf("[PRINTER-SIM] Received raster chunk (%d b64 chars)\n", (int)b64Len);
+    if (isLast) {
+        Serial.println("[PRINTER-SIM] ✓ Photostrip finished (Paper fed & cut).");
+    }
+#endif
+
+    server.send(200, "application/json", "{\"success\":true}");
+}
+
 void handleSimulateDeposit() {
     handleCors();
     float weight = 18.5f;
@@ -414,6 +499,7 @@ bool isObjectDetected() {
 }
 
 float readWeightGrams() {
+#if ENABLE_WEIGHT_SENSOR
     if (!hx711Ready) return 18.0f; // Return simulated weight if HX711 is not connected
 
     if (scale.is_ready()) {
@@ -422,6 +508,9 @@ float readWeightGrams() {
         return rawWeight;
     }
     return 0.0f;
+#else
+    return 18.0f; // Simulated average recyclable bottle/can weight
+#endif
 }
 
 void checkDepositSensors() {
@@ -440,6 +529,7 @@ void checkDepositSensors() {
 
         Serial.printf("[SENSOR] Object detected! Measured weight: %.1fg\n", weight);
 
+#if ENABLE_WEIGHT_SENSOR
         // Filter invalid weight or spurious vibration
         if (weight > 0.0f && (weight < MIN_WEIGHT_GRAMS || weight > MAX_WEIGHT_GRAMS)) {
             Serial.printf("[SENSOR] Weight %.1fg outside threshold (%0.1f - %0.1fg). Ignored.\n",
@@ -448,6 +538,7 @@ void checkDepositSensors() {
             digitalWrite(STATUS_LED_PIN, LOW);
             return;
         }
+#endif
 
         if (hasActiveSession) {
             Serial.printf("[DEPOSIT] Valid deposit! Forwarding to session: %s\n", activeSessionCode.c_str());
@@ -485,10 +576,15 @@ void setup() {
 #endif
 
     // Thermal Printer UART Setup
+#if ENABLE_THERMAL_PRINTER
     printerSerial.begin(PRINTER_BAUD_RATE, SERIAL_8N1, PRINTER_RX_PIN, PRINTER_TX_PIN);
     Serial.println("[INIT] Printer Serial (UART2) initialized.");
+#else
+    Serial.println("[INIT] Thermal Printer disabled (digital receipts on screen & Serial).");
+#endif
 
     // HX711 Load Cell Setup
+#if ENABLE_WEIGHT_SENSOR
     scale.begin(HX711_DOUT_PIN, HX711_SCK_PIN);
     if (scale.wait_ready_timeout(1000)) {
         scale.set_scale(HX711_CALIBRATION);
@@ -498,6 +594,9 @@ void setup() {
     } else {
         Serial.println("[INIT] ! HX711 not detected. Weight fallback mode active.");
     }
+#else
+    Serial.println("[INIT] Weight sensor disabled (single sensor item counting mode).");
+#endif
 
     // Connect to Wi-Fi
     Serial.printf("[WIFI] Connecting to SSID: %s", WIFI_SSID);
@@ -524,12 +623,14 @@ void setup() {
     server.on("/session", HTTP_POST, handlePostSession);
     server.on("/session", HTTP_DELETE, handleDeleteSession);
     server.on("/print", HTTP_POST, handlePrint);
+    server.on("/print-chunk", HTTP_POST, handlePrintChunk);
     server.on("/simulate/deposit", HTTP_POST, handleSimulateDeposit);
 
     // Options for CORS Preflight
     server.on("/status", HTTP_OPTIONS, handleOptions);
     server.on("/session", HTTP_OPTIONS, handleOptions);
     server.on("/print", HTTP_OPTIONS, handleOptions);
+    server.on("/print-chunk", HTTP_OPTIONS, handleOptions);
     server.on("/simulate/deposit", HTTP_OPTIONS, handleOptions);
 
     server.begin();

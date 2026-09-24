@@ -92,14 +92,50 @@ export default function SessionPage() {
         fetchSession();
     }, [fetchSession]);
 
-    // Register / deregister session with the local hardware bridge.
+    // Auto-poll session every 2 seconds so physical ESP32 deposits update the UI in real time
+    useEffect(() => {
+        if (!sessionCode || loading) return;
+
+        const pollInterval = setInterval(async () => {
+            try {
+                const { data } = await api.get(`/sessions/${sessionCode}`);
+                if (data.success) {
+                    setSession(data.session);
+                    const newCount = data.session.valid_deposits_count;
+                    const newCredits = data.session.available_credits;
+
+                    setDepositCount((prevCount) => {
+                        if (newCount > prevCount) {
+                            setRecentDeposit(true);
+                            setTimeout(() => setRecentDeposit(false), 2000);
+                        }
+                        return newCount;
+                    });
+
+                    setCredits((prevCredits) => {
+                        if (newCredits > prevCredits) {
+                            setShowCelebration(true);
+                            setTimeout(() => setShowCelebration(false), 3500);
+                        }
+                        return newCredits;
+                    });
+                }
+            } catch {
+                // Ignore transient network errors
+            }
+        }, 2000);
+
+        return () => clearInterval(pollInterval);
+    }, [sessionCode, loading]);
+
+    // Register / deregister session with the local hardware bridge / ESP32.
     useEffect(() => {
         if (!sessionCode || loading) return;
         registerSessionWithBridge(sessionCode);
         return () => { clearSessionFromBridge(); };
     }, [sessionCode, loading]);
 
-    // Poll bridge /status every 10 seconds for the hardware indicator badge.
+    // Poll bridge / ESP32 /status every 8 seconds for the hardware indicator badge.
     useEffect(() => {
         if (!sessionCode) return;
 
@@ -110,14 +146,15 @@ export default function SessionPage() {
                 });
                 if (!res.ok) { setHardwareStatus('unreachable'); return; }
                 const data = await res.json();
-                setHardwareStatus(data.serial_connected ? 'connected' : 'offline');
+                const isConnected = !!(data.serial_connected || data.wifi_connected || data.status === 'online');
+                setHardwareStatus(isConnected ? 'connected' : 'offline');
             } catch {
                 setHardwareStatus('unreachable');
             }
         };
 
         pollStatus();
-        statusPollRef.current = setInterval(pollStatus, 10000);
+        statusPollRef.current = setInterval(pollStatus, 8000);
 
         return () => {
             if (statusPollRef.current) clearInterval(statusPollRef.current);
