@@ -8,28 +8,47 @@ This guide covers everything required to take your physical components (**ESP32,
 
 ## 1. System Architecture & Dataflow
 
-```mermaid
-flowchart TD
-    subgraph KioskCabinet [EcoMemories Kiosk Cabinet]
-        Tablet["📱 Tablet Touchscreen\n(React Web App + Camera)"]
-        ESP32["⚡ ESP32 DevKit V1\n(Wi-Fi Client + Local Bridge :3333)"]
-        Sensor["📡 HC-SR04 Ultrasonic Sensor\n(Bottle/Can Chute Detection)"]
-        Buzzer["🔊 Active Piezo Buzzer\n(Audio Feedback & Fanfare)"]
-        Printer["🖨️ 58mm Thermal Printer\n(Photostrip Souvenir Output)"]
-    end
-
-    subgraph BackendCloud [Host Computer / Server]
-        Laravel["💻 Laravel Backend API\n(POST /api/devices/events)"]
-    end
-
-    %% Interactions
-    Sensor -- "Echo Time (40kHz Ping)" --> ESP32
-    ESP32 -- "Chirp / Fanfare Pulse" --> Buzzer
-    ESP32 -- "Deposit Event (Wi-Fi)" --> Laravel
-    Tablet -- "Live Polling (every 2s)" --> Laravel
-    Tablet -- "Session / Print Control (Wi-Fi :3333)" --> ESP32
-    ESP32 -- "ESC/POS Raster Bitmaps (UART)" --> Printer
-    Tablet -. "Direct Print Fallback (Bluetooth)" .-> Printer
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│                        ECOMEMORIES BOOTH CABINET                       │
+│                                                                        │
+│   ┌──────────────────────────┐                                         │
+│   │       TABLET SCREEN      │ ◄─── (Touchscreen mounted on front)     │
+│   │  • React Web Application │                                         │
+│   │  • Camera Capture        │                                         │
+│   └────────────┬─────────────┘                                         │
+│                │                                                       │
+│                │ Wi-Fi (Local Network / Hotspot)                       │
+│                ▼                                                       │
+│   ┌──────────────────────────┐         UART Serial (GPIO 17 TX)        │
+│   │       ESP32 BOARD        ├─────────────────────────────┐           │
+│   │  • Wi-Fi Server (:3333)  │                             │           │
+│   │  • Chute Detection Logic │                             │           │
+│   └─────┬──────────────┬─────┘                             ▼           │
+│         │              │                      ┌──────────────────────┐ │
+│         │ GPIO 14      │ GPIO 25              │   THERMAL PRINTER    │ │
+│         │ (Trigger)    │ (Buzzer Tone)        │ (58mm ESC/POS Roll)  │ │
+│         ▼              ▼                      │ Prints Souvenir Strip│ │
+│   ┌───────────┐  ┌───────────┐                └──────────┬───────────┘ │
+│   │ ULTRASONIC│  │   PIEZO   │                           │             │
+│   │  SENSOR   │  │  BUZZER   │                           │             │
+│   │ (HC-SR04) │  │  (Chirps) │                           │             │
+│   └───────────┘  └───────────┘                           │             │
+│                                                          │             │
+│   ┌──────────────────────────────────────────────┐       │             │
+│   │ External 5V-9V 2A DC Power Supply ───────────┴───────┘             │
+│   │ (Shared Common Ground with ESP32)                                  │
+│   └────────────────────────────────────────────────────────────────────┘
+│                                                                        │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │
+                                    │ Wi-Fi (POST /api/devices/events)
+                                    ▼
+                     ┌──────────────────────────────┐
+                     │     HOST COMPUTER / SERVER   │
+                     │  • Laravel API & MySQL DB    │
+                     │  • Photostrip Image Storage  │
+                     └──────────────────────────────┘
 ```
 
 ---
@@ -238,11 +257,29 @@ cmd /c "c:\xampp\htdocs\EcoMemories-Website\firmware\esp32\esp32_kiosk_controlle
 
 Follow these 4 phases to verify every component step by step:
 
-```mermaid
-graph LR
-    P1[Phase 1:\nSerial Monitor & Wi-Fi] --> P2[Phase 2:\nSensor & Buzzer Chirp]
-    P2 --> P3[Phase 3:\nLaravel & Tablet Polling]
-    P3 --> P4[Phase 4:\nPhoto Capture & Thermal Print]
+```text
+┌─────────────────────────┐
+│        PHASE 1          │
+│ Serial Monitor & Wi-Fi  │
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│        PHASE 2          │
+│ Sensor Wave & Buzzer    │
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│        PHASE 3          │
+│ Tablet Polling & Fanfare│
+└────────────┬────────────┘
+             │
+             ▼
+┌─────────────────────────┐
+│        PHASE 4          │
+│ Capture & Thermal Print │
+└─────────────────────────┘
 ```
 
 ### Phase 1: Serial Monitor & Network Link
