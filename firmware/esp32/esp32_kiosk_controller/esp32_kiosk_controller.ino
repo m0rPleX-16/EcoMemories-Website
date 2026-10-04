@@ -273,8 +273,10 @@ bool sendDepositToLaravel(String sessionCode, float weight) {
             int deposits = respDoc["session"]["deposits"] | (sessionDepositCount + 1);
             sessionDepositCount = deposits;
 
-            if (rewardEarned) {
-                Serial.println("[API] ★ REWARD EARNED! Session photo credit unlocked.");
+            if (rewardEarned || sessionDepositCount >= MAX_DEPOSITS_PER_SESSION) {
+                Serial.printf("[API] ★ REWARD EARNED! Session completed (%d/%d deposits). Photo credit unlocked.\n",
+                              sessionDepositCount, MAX_DEPOSITS_PER_SESSION);
+                Serial.println("[API] 🔒 Session goal completed. Sensor input paused for this session.");
                 beepRewardUnlocked();
             } else {
                 beepShort();
@@ -286,6 +288,10 @@ bool sendDepositToLaravel(String sessionCode, float weight) {
     } else {
         String errorMsg = http.getString();
         Serial.printf("[API] ✗ Error (%d): %s\n", httpCode, errorMsg.c_str());
+        if (httpCode == 400 && errorMsg.indexOf("already completed") >= 0) {
+            sessionDepositCount = MAX_DEPOSITS_PER_SESSION;
+            Serial.println("[API] 🔒 Session already at maximum deposits (5/5).");
+        }
         beepError();
     }
 
@@ -320,6 +326,8 @@ void handleStatus() {
     doc["wifi_connected"] = (WiFi.status() == WL_CONNECTED);
     doc["ip"] = WiFi.localIP().toString();
     doc["deposits_this_session"] = sessionDepositCount;
+    doc["max_deposits"] = MAX_DEPOSITS_PER_SESSION;
+    doc["session_completed"] = (hasActiveSession && sessionDepositCount >= MAX_DEPOSITS_PER_SESSION);
     doc["last_weight"] = lastMeasuredWeight;
     doc["uptime_ms"] = millis();
 
@@ -479,6 +487,11 @@ void handleSimulateDeposit() {
         return;
     }
 
+    if (sessionDepositCount >= MAX_DEPOSITS_PER_SESSION) {
+        server.send(400, "application/json", "{\"error\":\"Session already reached maximum deposits (5/5)\"}");
+        return;
+    }
+
     bool success = sendDepositToLaravel(activeSessionCode, weight);
     server.send(success ? 200 : 500, "application/json", success ? "{\"success\":true}" : "{\"error\":\"Failed\"}");
 }
@@ -520,11 +533,11 @@ void handleSensorDebug() {
     if (durA > 0) {
         doc["active_pin_mapping"] = "Row 12 (D14) is TRIG, Row 11 (D27) is ECHO";
         doc["distance_cm"] = distA;
-        doc["detected"] = (distA > 2.0f && distA < 35.0f);
+        doc["detected"] = (distA >= ULTRASONIC_MIN_DIST_CM && distA <= ULTRASONIC_MAX_DIST_CM);
     } else if (durB > 0) {
         doc["active_pin_mapping"] = "Row 11 (D27) is TRIG, Row 12 (D14) is ECHO (SWAPPED)";
         doc["distance_cm"] = distB;
-        doc["detected"] = (distB > 2.0f && distB < 35.0f);
+        doc["detected"] = (distB >= ULTRASONIC_MIN_DIST_CM && distB <= ULTRASONIC_MAX_DIST_CM);
     } else {
         doc["active_pin_mapping"] = "NO_ECHO_RECEIVED (Check 5V power VCC & GND)";
         doc["distance_cm"] = -1.0f;
@@ -542,13 +555,13 @@ bool isObjectDetected() {
 #if SENSOR_MODE_IR
     return digitalRead(PROXIMITY_PIN) == LOW;
 #else
-    // 1. Try default: 14 = TRIG, 27 = ECHO (Snappy 4000us timeout = ~68cm max)
+    // 1. Try default: 14 = TRIG, 27 = ECHO (Snappy 3000us timeout = ~51cm max)
     pinMode(14, OUTPUT);
     pinMode(27, INPUT);
     digitalWrite(14, LOW); delayMicroseconds(2);
     digitalWrite(14, HIGH); delayMicroseconds(10);
     digitalWrite(14, LOW);
-    long duration = pulseIn(27, HIGH, 4000);
+    long duration = pulseIn(27, HIGH, 3000);
 
     // 2. If no echo, try swapped: 27 = TRIG, 14 = ECHO
     if (duration == 0) {
@@ -557,12 +570,12 @@ bool isObjectDetected() {
         digitalWrite(27, LOW); delayMicroseconds(2);
         digitalWrite(27, HIGH); delayMicroseconds(10);
         digitalWrite(27, LOW);
-        duration = pulseIn(14, HIGH, 4000);
+        duration = pulseIn(14, HIGH, 3000);
     }
 
     if (duration == 0) return false;
     float distanceCm = duration * 0.034f / 2.0f;
-    if (distanceCm > 2.0f && distanceCm < ULTRASONIC_MAX_DIST_CM) {
+    if (distanceCm >= ULTRASONIC_MIN_DIST_CM && distanceCm <= ULTRASONIC_MAX_DIST_CM) {
         Serial.printf("[ULTRASONIC] Object detected at %.1f cm (duration: %ld us)\n", distanceCm, duration);
         return true;
     }
@@ -589,40 +602,46 @@ bool isObjectDetected() {
         unsigned long now = millis();
         if (now - lastDepositTime < DEPOSIT_DEBOUNCE_MS) {
             return; // Debounce period
-    }
+        }
 
-    if (isObjectDetected()) {
-        digitalWrite(STATUS_LED_PIN, HIGH);
-        delay(30); // Fast settle time
+        // Stop receiving deposit events once 5 deposits are completed for this session
+        if (hasActiveSession && sessionDepositCount >= MAX_DEPOSITS_PER_SESSION) {
+            return; // Target reached for this session; ignore further chute activity
+        }
 
-        float weight = readWeightGrams();
-        lastMeasuredWeight = weight;
-        lastDepositTime = millis();
+        if (isObjectDetected()) {
+            digitalWrite(STATUS_LED_PIN, HIGH);
+            delay(30); // Fast settle time
 
-        Serial.printf("[SENSOR] Object detected! Measured weight: %.1fg\n", weight);
+            float weight = readWeightGrams();
+            lastMeasuredWeight = weight;
+            lastDepositTime = millis();
+
+            Serial.printf("[SENSOR] Object detected! Measured weight: %.1fg\n", weight);
 
 #if ENABLE_WEIGHT_SENSOR
-        // Filter invalid weight or spurious vibration
-        if (weight > 0.0f && (weight < MIN_WEIGHT_GRAMS || weight > MAX_WEIGHT_GRAMS)) {
-            Serial.printf("[SENSOR] Weight %.1fg outside threshold (%0.1f - %0.1fg). Ignored.\n",
-                          weight, MIN_WEIGHT_GRAMS, MAX_WEIGHT_GRAMS);
-            beepError();
-            digitalWrite(STATUS_LED_PIN, LOW);
-            return;
-        }
+            // Filter invalid weight or spurious vibration
+            if (weight > 0.0f && (weight < MIN_WEIGHT_GRAMS || weight > MAX_WEIGHT_GRAMS)) {
+                Serial.printf("[SENSOR] Weight %.1fg outside threshold (%0.1f - %0.1fg). Ignored.\n",
+                              weight, MIN_WEIGHT_GRAMS, MAX_WEIGHT_GRAMS);
+                beepError();
+                digitalWrite(STATUS_LED_PIN, LOW);
+                return;
+            }
 #endif
 
-        if (hasActiveSession) {
-            Serial.printf("[DEPOSIT] Valid deposit! Forwarding to session: %s\n", activeSessionCode.c_str());
-            sendDepositToLaravel(activeSessionCode, weight);
-        } else {
-            Serial.println("[DEPOSIT] Item detected, but no active kiosk session registered.");
-            beepShort();
-        }
+            if (hasActiveSession) {
+                Serial.printf("[DEPOSIT] Valid deposit (%d/%d)! Forwarding to session: %s\n",
+                              sessionDepositCount + 1, MAX_DEPOSITS_PER_SESSION, activeSessionCode.c_str());
+                sendDepositToLaravel(activeSessionCode, weight);
+            } else {
+                Serial.println("[DEPOSIT] Item detected, but no active kiosk session registered.");
+                beepShort();
+            }
 
-        digitalWrite(STATUS_LED_PIN, LOW);
+            digitalWrite(STATUS_LED_PIN, LOW);
+        }
     }
-}
 
 // ─── Setup & Loop ─────────────────────────────────────────────────────────────
 

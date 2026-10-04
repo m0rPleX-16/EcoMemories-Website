@@ -76,6 +76,20 @@ class DeviceEventController extends Controller
             ], 404);
         }
 
+        // Stop receiving events if 5 deposits are already completed for this session
+        if ($session->validDepositsCount() >= RewardService::REQUIRED_DEPOSITS) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Session target already completed (5/5 deposits reached).',
+                'reward_earned' => true,
+                'session' => [
+                    'deposits' => $session->validDepositsCount(),
+                    'required' => RewardService::REQUIRED_DEPOSITS,
+                    'credits' => $session->availableCredits(),
+                ],
+            ], 400);
+        }
+
         // 4. Record deposit
         $deposit = $session->deposits()->create([
             'device_id' => $device->id,

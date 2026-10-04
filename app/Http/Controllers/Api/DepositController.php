@@ -31,6 +31,20 @@ class DepositController extends Controller
             ->where('status', Session::STATUS_ACTIVE)
             ->firstOrFail();
 
+        // Stop receiving events if 5 deposits are already completed for this session
+        if ($session->validDepositsCount() >= RewardService::REQUIRED_DEPOSITS) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Session target already completed (5/5 deposits reached).',
+                'reward_earned' => true,
+                'session' => [
+                    'deposits' => $session->validDepositsCount(),
+                    'required' => RewardService::REQUIRED_DEPOSITS,
+                    'credits' => $session->availableCredits(),
+                ],
+            ], 400);
+        }
+
         $device = Device::firstOrCreate(
             ['device_code' => 'SIMULATOR-001'],
             [

@@ -48,8 +48,10 @@
 #define BUZZER_PIN            25    // Active buzzer (HIGH = sound)
 #define STATUS_LED_PIN        2     // Onboard LED (indicates Wi-Fi & deposit status)
 
-// --- 5. Timing & Debounce ---
-#define DEPOSIT_DEBOUNCE_MS   1000  // Snappy 1-second delay between deposits (prevents double counts)
-#define ULTRASONIC_MAX_DIST_CM 45.0f // Detection range in cm (2cm to 45cm)
+// --- 5. Timing, Debounce & Detection Limits ---
+#define MAX_DEPOSITS_PER_SESSION 5    // Target deposits per session (stops receiving events after 5)
+#define DEPOSIT_DEBOUNCE_MS    1000  // Snappy 1-second delay between deposits (prevents double counts)
+#define ULTRASONIC_MIN_DIST_CM 2.0f  // Minimum detection distance in cm
+#define ULTRASONIC_MAX_DIST_CM 25.0f // Optimal chute distance (2cm - 25cm strictly detects bottle, rejects room)
 
 #endif // CONFIG_H
