@@ -49,6 +49,7 @@
 #define STATUS_LED_PIN        2     // Onboard LED (indicates Wi-Fi & deposit status)
 
 // --- 5. Timing & Debounce ---
-#define DEPOSIT_DEBOUNCE_MS   2000  // Minimum delay between deposits to prevent double counts
+#define DEPOSIT_DEBOUNCE_MS   1000  // Snappy 1-second delay between deposits (prevents double counts)
+#define ULTRASONIC_MAX_DIST_CM 45.0f // Detection range in cm (2cm to 45cm)
 
 #endif // CONFIG_H

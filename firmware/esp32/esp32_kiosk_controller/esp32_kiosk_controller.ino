@@ -485,23 +485,51 @@ void handleSimulateDeposit() {
 
 void handleSensorDebug() {
     handleCors();
-    JSON_DOC(doc, 256);
+    JSON_DOC(doc, 512);
 #if SENSOR_MODE_IR
     doc["mode"] = "IR";
     doc["raw_pin"] = digitalRead(PROXIMITY_PIN);
     doc["detected"] = (digitalRead(PROXIMITY_PIN) == LOW);
 #else
     doc["mode"] = "ULTRASONIC";
-    digitalWrite(PROXIMITY_PIN, LOW);
-    delayMicroseconds(2);
-    digitalWrite(PROXIMITY_PIN, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(PROXIMITY_PIN, LOW);
-    long duration = pulseIn(ULTRASONIC_ECHO_PIN, HIGH, 30000);
-    float dist = (duration == 0) ? -1.0f : (duration * 0.034f / 2.0f);
-    doc["duration_us"] = duration;
-    doc["distance_cm"] = dist;
-    doc["detected"] = (dist > 2.0f && dist < 30.0f);
+    doc["pin14_idle"] = digitalRead(14);
+    doc["pin27_idle"] = digitalRead(27);
+
+    // Test Config A: Pin 14 = TRIG, Pin 27 = ECHO
+    pinMode(14, OUTPUT);
+    pinMode(27, INPUT);
+    digitalWrite(14, LOW); delayMicroseconds(2);
+    digitalWrite(14, HIGH); delayMicroseconds(10);
+    digitalWrite(14, LOW);
+    long durA = pulseIn(27, HIGH, 30000);
+    float distA = (durA == 0) ? -1.0f : (durA * 0.034f / 2.0f);
+    doc["try_14trig_27echo_us"] = durA;
+    doc["try_14trig_27echo_cm"] = distA;
+
+    // Test Config B: Pin 27 = TRIG, Pin 14 = ECHO
+    pinMode(27, OUTPUT);
+    pinMode(14, INPUT);
+    digitalWrite(27, LOW); delayMicroseconds(2);
+    digitalWrite(27, HIGH); delayMicroseconds(10);
+    digitalWrite(27, LOW);
+    long durB = pulseIn(14, HIGH, 30000);
+    float distB = (durB == 0) ? -1.0f : (durB * 0.034f / 2.0f);
+    doc["try_27trig_14echo_us"] = durB;
+    doc["try_27trig_14echo_cm"] = distB;
+
+    if (durA > 0) {
+        doc["active_pin_mapping"] = "Row 12 (D14) is TRIG, Row 11 (D27) is ECHO";
+        doc["distance_cm"] = distA;
+        doc["detected"] = (distA > 2.0f && distA < 35.0f);
+    } else if (durB > 0) {
+        doc["active_pin_mapping"] = "Row 11 (D27) is TRIG, Row 12 (D14) is ECHO (SWAPPED)";
+        doc["distance_cm"] = distB;
+        doc["detected"] = (distB > 2.0f && distB < 35.0f);
+    } else {
+        doc["active_pin_mapping"] = "NO_ECHO_RECEIVED (Check 5V power VCC & GND)";
+        doc["distance_cm"] = -1.0f;
+        doc["detected"] = false;
+    }
 #endif
     String resp;
     serializeJson(doc, resp);
@@ -512,20 +540,29 @@ void handleSensorDebug() {
 
 bool isObjectDetected() {
 #if SENSOR_MODE_IR
-    // IR Obstacle Sensor typically outputs LOW when an obstacle is close
     return digitalRead(PROXIMITY_PIN) == LOW;
 #else
-    // HC-SR04 Ultrasonic Trigger
-    digitalWrite(PROXIMITY_PIN, LOW);
-    delayMicroseconds(2);
-    digitalWrite(PROXIMITY_PIN, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(PROXIMITY_PIN, LOW);
+    // 1. Try default: 14 = TRIG, 27 = ECHO (Snappy 4000us timeout = ~68cm max)
+    pinMode(14, OUTPUT);
+    pinMode(27, INPUT);
+    digitalWrite(14, LOW); delayMicroseconds(2);
+    digitalWrite(14, HIGH); delayMicroseconds(10);
+    digitalWrite(14, LOW);
+    long duration = pulseIn(27, HIGH, 4000);
 
-    long duration = pulseIn(ULTRASONIC_ECHO_PIN, HIGH, 30000);
+    // 2. If no echo, try swapped: 27 = TRIG, 14 = ECHO
+    if (duration == 0) {
+        pinMode(27, OUTPUT);
+        pinMode(14, INPUT);
+        digitalWrite(27, LOW); delayMicroseconds(2);
+        digitalWrite(27, HIGH); delayMicroseconds(10);
+        digitalWrite(27, LOW);
+        duration = pulseIn(14, HIGH, 4000);
+    }
+
     if (duration == 0) return false;
     float distanceCm = duration * 0.034f / 2.0f;
-    if (distanceCm > 2.0f && distanceCm < 30.0f) {
+    if (distanceCm > 2.0f && distanceCm < ULTRASONIC_MAX_DIST_CM) {
         Serial.printf("[ULTRASONIC] Object detected at %.1f cm (duration: %ld us)\n", distanceCm, duration);
         return true;
     }
@@ -533,30 +570,30 @@ bool isObjectDetected() {
 #endif
 }
 
-float readWeightGrams() {
-#if ENABLE_WEIGHT_SENSOR
-    if (!hx711Ready) return 18.0f; // Return simulated weight if HX711 is not connected
+    float readWeightGrams() {
+    #if ENABLE_WEIGHT_SENSOR
+        if (!hx711Ready) return 18.0f; // Return simulated weight if HX711 is not connected
 
-    if (scale.is_ready()) {
-        float rawWeight = scale.get_units(5); // Average 5 readings
-        if (rawWeight < 0) rawWeight = 0;
-        return rawWeight;
+        if (scale.is_ready()) {
+            float rawWeight = scale.get_units(5); // Average 5 readings
+            if (rawWeight < 0) rawWeight = 0;
+            return rawWeight;
+        }
+        return 0.0f;
+    #else
+        return 18.0f; // Simulated average recyclable bottle/can weight
+    #endif
     }
-    return 0.0f;
-#else
-    return 18.0f; // Simulated average recyclable bottle/can weight
-#endif
-}
 
-void checkDepositSensors() {
-    unsigned long now = millis();
-    if (now - lastDepositTime < DEPOSIT_DEBOUNCE_MS) {
-        return; // Debounce period
+    void checkDepositSensors() {
+        unsigned long now = millis();
+        if (now - lastDepositTime < DEPOSIT_DEBOUNCE_MS) {
+            return; // Debounce period
     }
 
     if (isObjectDetected()) {
         digitalWrite(STATUS_LED_PIN, HIGH);
-        delay(150); // Allow item to settle onto weight platform
+        delay(30); // Fast settle time
 
         float weight = readWeightGrams();
         lastMeasuredWeight = weight;
@@ -689,8 +726,8 @@ void loop() {
     // 2. Handle incoming HTTP requests from the React Kiosk
     server.handleClient();
 
-    // 3. Poll physical sensors for deposits
-    if (millis() - lastSensorCheckTime > 100) {
+    // 3. Snappy sensor polling (40 times per second for instant hand/item detection)
+    if (millis() - lastSensorCheckTime > 25) {
         lastSensorCheckTime = millis();
         checkDepositSensors();
     }
