@@ -30,10 +30,18 @@ type HardwareStatus = 'connected' | 'offline' | 'unreachable';
  */
 async function registerSessionWithBridge(sessionCode: string): Promise<void> {
     try {
+        const host = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+            ? '192.168.1.2'
+            : window.location.hostname;
+        const eventUrl = `http://${host}:8000/api/devices/events`;
+
         await fetch(`${BRIDGE_URL}/session`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ session_code: sessionCode }),
+            body: JSON.stringify({
+                session_code: sessionCode,
+                event_url: eventUrl,
+            }),
             signal: AbortSignal.timeout(3000),
         });
     } catch {

@@ -36,4 +36,3 @@ if %ERRORLEVEL% equ 0 (
     echo press and hold the BOOT button on the ESP32 and retry.
 )
 echo.
-pause

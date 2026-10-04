@@ -41,4 +41,3 @@ if %ERRORLEVEL% equ 0 (
         echo [ERROR] Compilation failed.
     )
 )
-pause

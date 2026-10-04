@@ -16,10 +16,8 @@
 #define WIFI_CONNECT_TIMEOUT  15000 // Milliseconds before retrying
 
 // --- 2. Laravel Backend API Configuration ---
-// If running locally, use your computer's local IP address or Cloudflare tunnel URL
-// Example local: "http://192.168.1.100:8000/api/devices/events"
-// Example tunnel: "https://your-tunnel.trycloudflare.com/api/devices/events"
-#define LARAVEL_EVENT_URL     "http://192.168.1.100:8000/api/devices/events"
+// Set this to your laptop/server's local network IP (192.168.1.2)
+#define LARAVEL_EVENT_URL     "http://192.168.1.2:8000/api/devices/events"
 #define DEVICE_ID             "ESP32-001"
 #define DEVICE_SECRET         ""    // Leave empty if DEVICE_SECRET is not enforced in .env
 

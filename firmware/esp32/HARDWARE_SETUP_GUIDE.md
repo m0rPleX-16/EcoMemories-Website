@@ -399,11 +399,14 @@ All project configurations are centralized in [`firmware/esp32/esp32_kiosk_contr
 ### Step 3: Configure Backend API Endpoint
 ```c
 // Line 22-23:
-// Set this to your laptop/server's local network IP (e.g., 192.168.1.100)
-#define LARAVEL_EVENT_URL     "http://192.168.1.100:8000/api/devices/events"
+// Set this to your laptop/server's local network IP (e.g., 192.168.1.2)
+#define LARAVEL_EVENT_URL     "http://192.168.1.2:8000/api/devices/events"
 #define DEVICE_ID             "ESP32-001"
 #define DEVICE_SECRET         ""    // Leave empty if not enforced in .env
 ```
+
+> [!IMPORTANT]
+> When running Laravel locally, make sure `php artisan serve` is bound to `--host=0.0.0.0 --port=8000` (already set in `composer.json`'s `composer run dev`), otherwise Windows will block external network requests from the ESP32!
 
 ---
 

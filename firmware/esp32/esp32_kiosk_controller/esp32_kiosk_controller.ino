@@ -50,6 +50,7 @@ unsigned long lastDepositTime = 0;
 unsigned long lastSensorCheckTime = 0;
 int sessionDepositCount = 0;
 float lastMeasuredWeight = 0.0f;
+String currentEventUrl = LARAVEL_EVENT_URL;
 
 // ─── Audio & Feedback Functions ───────────────────────────────────────────────
 
@@ -233,7 +234,7 @@ bool sendDepositToLaravel(String sessionCode, float weight) {
     }
 
     HTTPClient http;
-    http.begin(LARAVEL_EVENT_URL);
+    http.begin(currentEventUrl);
     http.addHeader("Content-Type", "application/json");
 
     if (strlen(DEVICE_SECRET) > 0) {
@@ -255,7 +256,7 @@ bool sendDepositToLaravel(String sessionCode, float weight) {
     String requestBody;
     serializeJson(doc, requestBody);
 
-    Serial.printf("[API] ▶ Sending deposit to Laravel (%s)...\n", LARAVEL_EVENT_URL);
+    Serial.printf("[API] ▶ Sending deposit to Laravel (%s)...\n", currentEventUrl.c_str());
     Serial.println("[API] Payload: " + requestBody);
 
     int httpCode = http.POST(requestBody);
@@ -346,6 +347,11 @@ void handlePostSession() {
     activeSessionCode.toUpperCase();
     hasActiveSession = (activeSessionCode.length() > 0);
     sessionDepositCount = 0;
+
+    if (doc.containsKey("event_url")) {
+        currentEventUrl = doc["event_url"].as<String>();
+        Serial.println("[BRIDGE] Updated dynamic Laravel Event URL: " + currentEventUrl);
+    }
 
     Serial.println("[BRIDGE] ✓ Active session registered: " + activeSessionCode);
     beepShort();
