@@ -85,41 +85,86 @@ This guide covers everything required to take your physical components (**ESP32,
       (-) Blue Rail:  [ GND from ESP32 ]    ──────────────► Shared GND for Sensor, Buzzer, & Printer
 ```
 
-### 3.1 Visual Wiring Diagram & Breadboard Overview
+### 3.1 Visual Wiring Diagrams & Breadboard Blueprint
 
-![ESP32 Breadboard Wiring Diagram](./images/esp32_breadboard_wiring.jpg)
+> [!IMPORTANT]
+> **CRITICAL 38-PIN BREADBOARD SEATING RULE (Rows 1 to 19):**
+> Your ESP32 DevKit V1 has **38 pins total**: **19 pins on the left** and **19 pins on the right**.
+> * The ESP32 headers plug strictly into **Breadboard Rows 1 through 19**.
+> * **ROW 20 IS COMPLETELY EMPTY** — It is NOT plugged into any pin of the ESP32.
+> * **Rows 21 to 30** are free open tie-points on your 30-row breadboard, used for mounting the Active Piezo Buzzer and routing jumper wires.
+> * The left ESP32 header sits in column `b`, leaving column `a` (holes `a1` to `a19`) open for your jumpers.
+> * The right ESP32 header sits in column `i`, leaving column `j` (holes `j1` to `j19`) open for your jumpers.
 
-Based on your physical hardware setup, your ESP32-WROOM-32 (38-Pin USB-C DevKit) spans across the central divider trough from **Row 2 to Row 20**:
-* **Left Pins (Column `b`)** are accessed via **Breadboard Column `a`** (Holes `a2` through `a20`).
-* **Right Pins (Column `i`)** are accessed via **Breadboard Column `j`** (Holes `j2` through `j20`).
-* **Left & Right Power Buses** (`+` Red for 5V, `-` Blue for GND) distribute shared power across all components.
+#### Engineering Vector Blueprint (Zoomable & Coordinate-Accurate)
+![ESP32 Breadboard Blueprint Vector](./images/esp32_breadboard_diagram.svg)
+
+#### Physical Component Assembly Photo
+![ESP32 Breadboard Wiring Photo](./images/esp32_breadboard_wiring.jpg)
+
+```text
+===================================================================================================
+                       ECOMEMORIES 38-PIN ESP32 BREADBOARD WIRING GRID
+===================================================================================================
+
+  [ + ] POWER BUS (5V)   <── Jumper wire from a18 (VIN)
+  [ - ] GROUND BUS (GND) <── Jumper wire from a19 (GND)
+   │     │
+   │     │      a   b   c   d   e   (Trough)   f   g   h   i   j
+   │     │    ┌───┬───┬───┬───┬───┐  [USB-C] ┌───┬───┬───┬───┬───┐
+   │     │  1 │ · │ 3V3           │  BOOT  EN│           │GND│ · │ 1  ──► GND
+   │     │  2 │ · │ EN            │          │           │D23│ · │ 2
+   │     │  3 │ · │ VP (GPIO 36)  │          │           │D22│ · │ 3
+   │     │  4 │ · │ VN (GPIO 39)  │          │           │TX0│ · │ 4
+   │     │  5 │ · │ D34 (GPIO 34) │          │           │RX0│ · │ 5
+   │     │  6 │ · │ D35 (GPIO 35) │          │           │D21│ · │ 6
+   │     │  7 │ · │ D32 (GPIO 32) │          │           │D19│ · │ 7
+   │     │  8 │ · │ D33 (GPIO 33) │          │           │D18│ · │ 8
+   │     │  9 │ · │ D25 (GPIO 25) │◄── BUZZER (+)        │D5 │ · │ 9
+   │     │ 10 │ · │ D26 (GPIO 26) │          │           │TX2│ · │ 10 ──► PRINTER RX (GPIO 17)
+   │     │ 11 │ · │ D27 (GPIO 27) │◄── ECHO (Ultrasonic) │RX2│ · │ 11 ◄── PRINTER TX (GPIO 16)
+   │     │ 12 │ · │ D14 (GPIO 14) │◄── TRIG / IR OUT     │D4 │ · │ 12
+   │     │ 13 │ · │ D12 (GPIO 12) │          │ [ESP32]   │D2 │ · │ 13 ──► Onboard Blue LED
+   │     │ 14 │ · │ D13 (GPIO 13) │          │  Module   │D15│ · │ 14
+   │     │ 15 │ · │ D9  (SD2)     │          │           │D8 │ · │ 15
+   │     │ 16 │ · │ D10 (SD3)     │          │           │D7 │ · │ 16
+   │     │ 17 │ · │ D11 (CMD)     │          │           │D6 │ · │ 17
+   ├───┐ │ 18 │ · │ VIN (5V Input)│──────────┘           │CLK│ · │ 18
+   │   │ │ 19 │ · │ GND           │                      │GND│ · │ 19
+   │   │ │    └───┴───┴───┴───┴───┘                      └───┴───┴───┴───┴───┘
+   │   │ │ 20 │ · │ · │ · │ · │ · │ ◄── [ROW 20 IS EMPTY: NO ESP32 PINS HERE]
+   │   │ │ 21 │ · │ · │ · │ · │ · │ ◄── [ROW 21+ FREE BREADBOARD AREA]
+   │   │ │
+   │   └──┴──► Jumper wire: Hole a19  ──►  Blue Ground Rail [ - ]
+   └─────────► Jumper wire: Hole a18  ──►  Red 5V Power Rail [ + ]
+```
 
 ---
 
-### 3.2 Exhaustive 38-Pin Breadboard Coordinate Reference Table
+### 3.2 Exhaustive 38-Pin Breadboard Coordinate Reference Table (Rows 1 to 19)
 
 | Row # | Left Hole (`col a`) | Left Silkscreen | GPIO / Function | What Connects Here | Right Hole (`col j`) | Right Silkscreen | GPIO / Function | What Connects Here |
 | :---: | :---: | :---: | :---: | :--- | :---: | :---: | :---: | :--- |
-| **Row 1** | `a1` | *(empty)* | *(empty breadboard hole)* | *Not connected* | `j1` | *(empty)* | *(empty breadboard hole)* | *Not connected* |
-| **Row 2** | `a2` | **`3V3`** | 3.3V Power Out | *Alternative 3.3V power (leave open)* | `j2` | **`GND`** | Ground | *Secondary Ground (leave open)* |
-| **Row 3** | `a3` | **`EN`** | Chip Enable / Reset | *Reset button line (do not wire)* | `j3` | **`D23`** | GPIO 23 | *Free GPIO* |
-| **Row 4** | `a4` | **`VP`** | GPIO 36 (ADC1_0) | *Analog input only (leave open)* | `j4` | **`D22`** | GPIO 22 | *I2C SCL (leave open)* |
-| **Row 5** | `a5` | **`VN`** | GPIO 39 (ADC1_3) | *Analog input only (leave open)* | `j5` | **`TX0`** | GPIO 1 (UART0 TX) | *USB Programming TX (do not wire)* |
-| **Row 6** | `a6` | **`D34`** | GPIO 34 (Input only) | *Free Input* | `j6` | **`RX0`** | GPIO 3 (UART0 RX) | *USB Programming RX (do not wire)* |
-| **Row 7** | `a7` | **`D35`** | GPIO 35 (Input only) | *Free Input* | `j7` | **`D21`** | GPIO 21 | *I2C SDA (leave open)* |
-| **Row 8** | `a8` | **`D32`** | GPIO 32 | *Free GPIO* | `j8` | **`D19`** | GPIO 19 | *HX711 SCK (if scale is attached)* |
-| **Row 9** | `a9` | **`D33`** | GPIO 33 | *Free GPIO* | `j9` | **`D18`** | GPIO 18 | *HX711 DOUT (if scale is attached)* |
-| **Row 10** | `a10` | **`D25`** | GPIO 25 (PWM Out) | **ACTIVE BUZZER POSITIVE (`+`)** | `j10` | **`D5`** | GPIO 5 | *Free GPIO* |
-| **Row 11** | `a11` | **`D26`** | GPIO 26 | *Free GPIO* | `j11` | **`TX2`** | GPIO 17 (UART2 TX) | **THERMAL PRINTER `RX`** (Print Data) |
-| **Row 12** | `a12` | **`D27`** | GPIO 27 (Input) | **ULTRASONIC ECHO PIN** *(HC-SR04 only)* | `j12` | **`RX2`** | GPIO 16 (UART2 RX) | **THERMAL PRINTER `TX`** *(Optional status)* |
-| **Row 13** | `a13` | **`D14`** | GPIO 14 (I/O) | **IR SENSOR `OUT`** / **ULTRASONIC `TRIG`** | `j13` | **`D4`** | GPIO 4 | *Free GPIO* |
-| **Row 14** | `a14` | **`D12`** | GPIO 12 | *Free GPIO (boot-strapping)* | `j14` | **`D2`** | GPIO 2 (Onboard LED) | *Built-in Blue Status LED (already on board)* |
-| **Row 15** | `a15` | **`D13`** | GPIO 13 | *Free GPIO* | `j15` | **`D15`** | GPIO 15 | *Free GPIO* |
-| **Row 16** | `a16` | **`D9`** | GPIO 9 (SD2) | *Internal Flash memory (do not wire)* | `j16` | **`D8`** | GPIO 8 (SD1) | *Internal Flash memory (do not wire)* |
-| **Row 17** | `a17` | **`D10`** | GPIO 10 (SD3) | *Internal Flash memory (do not wire)* | `j17` | **`D7`** | GPIO 7 (SD0) | *Internal Flash memory (do not wire)* |
-| **Row 18** | `a18` | **`D11`** | GPIO 11 (CMD) | *Internal Flash memory (do not wire)* | `j18` | **`D6`** | GPIO 6 (CLK) | *Internal Flash memory (do not wire)* |
-| **Row 19** | `a19` | **`VIN`** | 5V Power Input/Output | **5V JUMPER TO RED POWER RAIL (`+`)** | `j19` | **`CLK`** | Internal Clock | *Internal Flash (do not wire)* |
-| **Row 20** | `a20` | **`GND`** | Ground Return | **GND JUMPER TO BLUE POWER RAIL (`-`)** | `j20` | **`GND`** | Ground Return | *Secondary Ground* |
+| **Row 1** | `a1` | **`3V3`** | 3.3V Power Out | *Alternative 3.3V power (leave open)* | `j1` | **`GND`** | Ground | *Secondary Ground (leave open)* |
+| **Row 2** | `a2` | **`EN`** | Chip Enable / Reset | *Reset button line (do not wire)* | `j2` | **`D23`** | GPIO 23 | *Free GPIO* |
+| **Row 3** | `a3` | **`VP`** | GPIO 36 (ADC1_0) | *Analog input only (leave open)* | `j3` | **`D22`** | GPIO 22 | *I2C SCL (leave open)* |
+| **Row 4** | `a4` | **`VN`** | GPIO 39 (ADC1_3) | *Analog input only (leave open)* | `j4` | **`TX0`** | GPIO 1 (UART0 TX) | *USB Programming TX (do not wire)* |
+| **Row 5** | `a5` | **`D34`** | GPIO 34 (Input only) | *Free Input* | `j5` | **`RX0`** | GPIO 3 (UART0 RX) | *USB Programming RX (do not wire)* |
+| **Row 6** | `a6` | **`D35`** | GPIO 35 (Input only) | *Free Input* | `j6` | **`D21`** | GPIO 21 | *I2C SDA (leave open)* |
+| **Row 7** | `a7` | **`D32`** | GPIO 32 | *Free GPIO* | `j7` | **`D19`** | GPIO 19 | *HX711 SCK (if scale is attached)* |
+| **Row 8** | `a8` | **`D33`** | GPIO 33 | *Free GPIO* | `j8` | **`D18`** | GPIO 18 | *HX711 DOUT (if scale is attached)* |
+| **Row 9** | `a9` | **`D25`** | GPIO 25 (PWM Out) | **ACTIVE BUZZER POSITIVE (`+`)** | `j9` | **`D5`** | GPIO 5 | *Free GPIO* |
+| **Row 10** | `a10` | **`D26`** | GPIO 26 | *Free GPIO* | `j10` | **`TX2`** | GPIO 17 (UART2 TX) | **THERMAL PRINTER `RX`** (Print Data) |
+| **Row 11** | `a11` | **`D27`** | GPIO 27 (Input) | **ULTRASONIC ECHO PIN** *(HC-SR04 only)* | `j11` | **`RX2`** | GPIO 16 (UART2 RX) | **THERMAL PRINTER `TX`** *(Optional status)* |
+| **Row 12** | `a12` | **`D14`** | GPIO 14 (I/O) | **IR SENSOR `OUT`** / **ULTRASONIC `TRIG`** | `j12` | **`D4`** | GPIO 4 | *Free GPIO* |
+| **Row 13** | `a13` | **`D12`** | GPIO 12 | *Free GPIO (boot-strapping)* | `j13` | **`D2`** | GPIO 2 (Onboard LED) | *Built-in Blue Status LED (already on board)* |
+| **Row 14** | `a14` | **`D13`** | GPIO 13 | *Free GPIO* | `j14` | **`D15`** | GPIO 15 | *Free GPIO* |
+| **Row 15** | `a15` | **`D9`** | GPIO 9 (SD2) | *Internal Flash memory (do not wire)* | `j15` | **`D8`** | GPIO 8 (SD1) | *Internal Flash memory (do not wire)* |
+| **Row 16** | `a16` | **`D10`** | GPIO 10 (SD3) | *Internal Flash memory (do not wire)* | `j16` | **`D7`** | GPIO 7 (SD0) | *Internal Flash memory (do not wire)* |
+| **Row 17** | `a17` | **`D11`** | GPIO 11 (CMD) | *Internal Flash memory (do not wire)* | `j17` | **`D6`** | GPIO 6 (CLK) | *Internal Flash memory (do not wire)* |
+| **Row 18** | `a18` | **`VIN`** | 5V Power Input/Output | **5V JUMPER TO RED POWER RAIL (`+`)** | `j18` | **`CLK`** | Internal Clock | *Internal Flash (do not wire)* |
+| **Row 19** | `a19` | **`GND`** | Ground Return | **GND JUMPER TO BLUE POWER RAIL (`-`)** | `j19` | **`GND`** | Ground Return | *Secondary Ground* |
+| **Row 20** | `a20` | *(EMPTY)* | *(EMPTY HOLE)* | **NOT CONNECTED TO ESP32 (FREE ROW)** | `j20` | *(EMPTY)* | *(EMPTY HOLE)* | **NOT CONNECTED TO ESP32 (FREE ROW)** |
 | **Row 21+** | `a21+` | *(empty)* | *(empty breadboard rows)* | *Free breadboard area for components* | `j21+` | *(empty)* | *(empty breadboard rows)* | *Free breadboard area for components* |
 
 ---
@@ -133,22 +178,22 @@ Grab **8 Dupont jumper wires** (Male-to-Male or Male-to-Female) and follow these
                                STEP-BY-STEP WIRING PROCEDURE
 ===================================================================================================
 
-[WIRE 1 - Red Jumper]      Breadboard Hole a19 (VIN)  ────────►  Red Power Rail (+)
-[WIRE 2 - Black Jumper]    Breadboard Hole a20 (GND)  ────────►  Blue Ground Rail (-)
+[WIRE 1 - Red Jumper]      Breadboard Hole a18 (VIN)  ────────►  Red Power Rail (+)
+[WIRE 2 - Black Jumper]    Breadboard Hole a19 (GND)  ────────►  Blue Ground Rail (-)
 
-[WIRE 3 - Orange Jumper]   Breadboard Hole a10 (D25)  ────────►  Buzzer (+) [Longer leg]
+[WIRE 3 - Orange Jumper]   Breadboard Hole a9  (D25)  ────────►  Buzzer (+) [Longer leg]
 [WIRE 4 - Black Jumper]    Blue Ground Rail (-)       ────────►  Buzzer (-) [Shorter leg]
 
 [WIRE 5 - Red Jumper]      Red Power Rail (+)         ────────►  Sensor VCC Pin
 [WIRE 6 - Black Jumper]    Blue Ground Rail (-)       ────────►  Sensor GND Pin
-[WIRE 7 - Yellow Jumper]   Breadboard Hole a13 (D14)  ────────►  Sensor OUT Pin (or TRIG)
+[WIRE 7 - Yellow Jumper]   Breadboard Hole a12 (D14)  ────────►  Sensor OUT Pin (or TRIG)
 
 --- (Only if using 4-Pin Ultrasonic HC-SR04 Sensor) ---
-[WIRE 8 - Green Jumper]    Breadboard Hole a12 (D27)  ────────►  HC-SR04 ECHO Pin
+[WIRE 8 - Green Jumper]    Breadboard Hole a11 (D27)  ────────►  HC-SR04 ECHO Pin
 
 --- (Only if using Wired TTL Thermal Printer) ---
-[WIRE 9 - White Jumper]    Breadboard Hole j11 (TX2)  ────────►  Thermal Printer RX
-[WIRE 10 - Blue Jumper]    Breadboard Hole j12 (RX2)  ────────►  Thermal Printer TX
+[WIRE 9 - White Jumper]    Breadboard Hole j10 (TX2)  ────────►  Thermal Printer RX
+[WIRE 10 - Blue Jumper]    Breadboard Hole j11 (RX2)  ────────►  Thermal Printer TX
 ```
 
 ---
@@ -163,7 +208,7 @@ Grab **8 Dupont jumper wires** (Male-to-Male or Male-to-Female) and follow these
   * You can plug the Buzzer directly into the lower empty rows of your breadboard:
     * Plug the **Longer leg (`+`)** into hole **`e23`**.
     * Plug the **Shorter leg (`-`)** into hole **`e24`**.
-    * Run a jumper from **`a10`** (ESP32 `D25`) to hole **`a23`**.
+    * Run a jumper from **`a9`** (ESP32 `D25`, Row 9) to hole **`a23`**.
     * Run a jumper from the **Blue Ground Rail (`-`)** to hole **`a24`**.
 
 ---
@@ -171,9 +216,9 @@ Grab **8 Dupont jumper wires** (Male-to-Male or Male-to-Female) and follow these
 #### 2. The IR Obstacle Sensor (Detection Chute)
 * **Pin Labels**: On the blue or black PCB, find the 3 pins labeled `VCC`, `GND`, and `OUT`.
 * **Connections**:
-  * `VCC` $\rightarrow$ Red Rail (`+`)
-  * `GND` $\rightarrow$ Blue Rail (`-`)
-  * `OUT` $\rightarrow$ Breadboard Hole **`a13`** (`D14`)
+  * `VCC` $\rightarrow$ Red Rail (`+`) (5V)
+  * `GND` $\rightarrow$ Blue Rail (`-`) (Ground)
+  * `OUT` $\rightarrow$ Breadboard Hole **`a12`** (ESP32 `D14`, Row 12)
 * **Sensitivity Calibration (Crucial Step)**:
   * On the sensor board, there is a small rectangular blue component with a silver screw head (the **trimmer potentiometer**).
   * With the ESP32 powered, hold a transparent bottle or plastic cup inside the chute at your desired detection distance (e.g., 5 cm to 10 cm).
@@ -183,10 +228,10 @@ Grab **8 Dupont jumper wires** (Male-to-Male or Male-to-Female) and follow these
 
 #### 3. The HC-SR04 Ultrasonic Sensor (Alternative Chute Sensor)
 * **Pin Labels**: Facing the two round silver speaker transducers ('T' and 'R'), the 4 pins at the bottom are:
-  * `VCC` (Left) $\rightarrow$ Red Rail (`+`)
-  * `TRIG` (Center Left) $\rightarrow$ Breadboard Hole **`a13`** (`D14`)
-  * `ECHO` (Center Right) $\rightarrow$ Breadboard Hole **`a12`** (`D27`)
-  * `GND` (Right) $\rightarrow$ Blue Rail (`-`)
+  * `VCC` (Left) $\rightarrow$ Red Rail (`+`) (5V)
+  * `TRIG` (Center Left) $\rightarrow$ Breadboard Hole **`a12`** (ESP32 `D14`, Row 12)
+  * `ECHO` (Center Right) $\rightarrow$ Breadboard Hole **`a11`** (ESP32 `D27`, Row 11)
+  * `GND` (Right) $\rightarrow$ Blue Rail (`-`) (Ground)
 * **Chute Positioning**:
   * Mount the sensor at the top or side of the bottle drop chute pointing diagonally downward.
   * When a bottle falls past the two silver cylinders, the sound echo duration drops dramatically, instantly registering a deposit event!
