@@ -19,7 +19,7 @@ import {
     Loader2,
 } from 'lucide-react';
 
-const BRIDGE_URL = (import.meta.env.VITE_BRIDGE_URL as string | undefined) || 'http://localhost:3333';
+const BRIDGE_URL = (import.meta.env.VITE_BRIDGE_URL as string | undefined) || 'http://192.168.1.8:3333';
 
 export default function ResultPage() {
     const { sessionCode } = useParams<{ sessionCode: string }>();

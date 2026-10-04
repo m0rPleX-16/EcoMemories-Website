@@ -19,8 +19,8 @@ import {
 
 // ─── Bridge Integration ───────────────────────────────────────────────────────
 
-/** Base URL of the local Node.js bridge. Falls back to localhost:3333. */
-const BRIDGE_URL = (import.meta.env.VITE_BRIDGE_URL as string | undefined) || 'http://localhost:3333';
+/** Base URL of the local ESP32 hardware server. */
+const BRIDGE_URL = (import.meta.env.VITE_BRIDGE_URL as string | undefined) || 'http://192.168.1.8:3333';
 
 type HardwareStatus = 'connected' | 'offline' | 'unreachable';
 
@@ -30,10 +30,13 @@ type HardwareStatus = 'connected' | 'offline' | 'unreachable';
  */
 async function registerSessionWithBridge(sessionCode: string): Promise<void> {
     try {
+        const isHttps = window.location.protocol === 'https:';
         const host = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
             ? '192.168.1.2'
             : window.location.hostname;
-        const eventUrl = `http://${host}:8000/api/devices/events`;
+        const eventUrl = isHttps
+            ? `${window.location.origin}/api/devices/events`
+            : `http://${host}:8000/api/devices/events`;
 
         await fetch(`${BRIDGE_URL}/session`, {
             method: 'POST',

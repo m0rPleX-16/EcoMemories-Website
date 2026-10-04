@@ -11,6 +11,7 @@
  */
 
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <WebServer.h>
 #include <ArduinoJson.h>
@@ -234,7 +235,16 @@ bool sendDepositToLaravel(String sessionCode, float weight) {
     }
 
     HTTPClient http;
-    http.begin(currentEventUrl);
+    WiFiClientSecure secureClient;
+    WiFiClient standardClient;
+
+    if (currentEventUrl.startsWith("https://")) {
+        secureClient.setInsecure(); // Support Cloudflare Tunnels and HTTPS without certificate errors
+        http.begin(secureClient, currentEventUrl);
+    } else {
+        http.begin(standardClient, currentEventUrl);
+    }
+
     http.addHeader("Content-Type", "application/json");
 
     if (strlen(DEVICE_SECRET) > 0) {

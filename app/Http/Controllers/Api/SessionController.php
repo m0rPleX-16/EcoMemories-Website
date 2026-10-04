@@ -23,6 +23,8 @@ class SessionController extends Controller
             'expires_at' => now()->addHours(2),
         ]);
 
+        $this->notifyBridgeSession($session->session_code);
+
         return response()->json([
             'success' => true,
             'session' => $this->formatSession($session),
@@ -40,10 +42,30 @@ class SessionController extends Controller
             ->with(['deposits', 'rewards', 'photoSessions.photo'])
             ->firstOrFail();
 
+        $this->notifyBridgeSession($session->session_code);
+
         return response()->json([
             'success' => true,
             'session' => $this->formatSession($session),
         ]);
+    }
+
+    /**
+     * Notify the ESP32 hardware bridge of the active session code.
+     */
+    private function notifyBridgeSession(string $sessionCode): void
+    {
+        $bridgeUrl = env('VITE_BRIDGE_URL', 'http://192.168.1.8:3333');
+        $eventUrl = url('/api/devices/events');
+
+        try {
+            \Illuminate\Support\Facades\Http::timeout(1)->post("{$bridgeUrl}/session", [
+                'session_code' => $sessionCode,
+                'event_url' => $eventUrl,
+            ]);
+        } catch (\Throwable $e) {
+            // Best effort
+        }
     }
 
     /**
