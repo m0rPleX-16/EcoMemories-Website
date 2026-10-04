@@ -11,8 +11,8 @@
 #define ENABLE_THERMAL_PRINTER 0    // 0 = Disabled (no thermal printer; receipt outputs to Serial Monitor & screen)
 
 // --- 1. Wi-Fi Configuration ---
-#define WIFI_SSID             "YOUR_WIFI_SSID"
-#define WIFI_PASSWORD         "YOUR_WIFI_PASSWORD"
+#define WIFI_SSID             "Andrade-ZTE"
+#define WIFI_PASSWORD         "22UcQ3zR"
 #define WIFI_CONNECT_TIMEOUT  15000 // Milliseconds before retrying
 
 // --- 2. Laravel Backend API Configuration ---

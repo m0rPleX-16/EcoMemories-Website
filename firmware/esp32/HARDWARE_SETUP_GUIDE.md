@@ -85,27 +85,117 @@ This guide covers everything required to take your physical components (**ESP32,
       (-) Blue Rail:  [ GND from ESP32 ]    ──────────────► Shared GND for Sensor, Buzzer, & Printer
 ```
 
-### Complete Physical Breadboard Wiring Diagram
+### 3.1 Your Physical 38-Pin Breadboard Coordinate Map
 
+Based on your actual hardware setup, the ESP32 is seated over the center trough from **Row 2 to Row 20**, leaving **Column `a`** (left side) and **Column `j`** (right side) accessible for jumper wires.
+
+```text
+===================================================================================================
+                       ECOMEMORIES 38-PIN ESP32 BREADBOARD WIRING GRID
+===================================================================================================
+
+  [ + ] POWER BUS (5V)  <── Jumper from a19 (VIN)
+  [ - ] GROUND BUS (GND)<── Jumper from a20 (GND)
+   │     │
+   │     │      a   b   c   d   e   (Trough)   f   g   h   i   j
+   │     │    ┌───┬───┬───┬───┬───┐          ┌───┬───┬───┬───┬───┐
+   │     │  1 │ · │ · │ · │ · │ · │          │ · │ · │ · │ · │ · │ 1
+   │     │    ├───┼───┼───┼───┼───┤  [USB-C] ├───┼───┼───┼───┼───┤
+   │     │  2 │ · │ 3V3           │  BOOT  EN│           │GND│ · │ 2  ──► GND
+   │     │  3 │ · │ EN            │          │           │D23│ · │ 3
+   │     │  4 │ · │ VP (GPIO 36)  │          │           │D22│ · │ 4
+   │     │  5 │ · │ VN (GPIO 39)  │          │           │TX0│ · │ 5
+   │     │  6 │ · │ D34 (GPIO 34) │          │           │RX0│ · │ 6
+   │     │  7 │ · │ D35 (GPIO 35) │          │           │D21│ · │ 7
+   │     │  8 │ · │ D32 (GPIO 32) │          │           │D19│ · │ 8
+   │     │  9 │ · │ D33 (GPIO 33) │          │           │D18│ · │ 9
+   │     │ 10 │ · │ D25 (GPIO 25) │◄── BUZZER (+)        │D5 │ · │ 10
+   │     │ 11 │ · │ D26 (GPIO 26) │          │           │TX2│ · │ 11 ──► PRINTER RX (GPIO 17)
+   │     │ 12 │ · │ D27 (GPIO 27) │◄── ECHO (Ultrasonic) │RX2│ · │ 12 ◄── PRINTER TX (GPIO 16)
+   │     │ 13 │ · │ D14 (GPIO 14) │◄── TRIG / IR OUT     │D4 │ · │ 13
+   │     │ 14 │ · │ D12 (GPIO 12) │          │ [ESP32]   │D2 │ · │ 14 ──► Onboard Blue LED
+   │     │ 15 │ · │ D13 (GPIO 13) │          │  Module   │D15│ · │ 15
+   │     │ 16 │ · │ D9  (SD2)     │          │           │D8 │ · │ 16
+   │     │ 17 │ · │ D10 (SD3)     │          │           │D7 │ · │ 17
+   │     │ 18 │ · │ D11 (CMD)     │          │           │D6 │ · │ 18
+   ├───┐ │ 19 │ · │ VIN (5V Input)│──────────┘           │CLK│ · │ 19
+   │   │ │ 20 │ · │ GND           │                      │GND│ · │ 20
+   │   │ │    └───┴───┴───┴───┴───┘                      └───┴───┴───┴───┴───┘
+   │   │ │ 21 │ · │ · │ · │ · │ · │                      │ · │ · │ · │ · │ · │ 21
+   │   │ │ 22 │ · │ · │ · │ · │ · │                      │ · │ · │ · │ · │ · │ 22
+   │   │ │ 23 │ · │ · │ · │ · │ · │                      │ · │ · │ · │ · │ · │ 23
+   │   │ │
+   │   └──┴──► Jumper wire: Hole a20  ──►  Blue Ground Rail [ - ]
+   └─────────► Jumper wire: Hole a19  ──►  Red 5V Power Rail [ + ]
 ```
-                              ESP32 DevKit V1
-                             ┌─────────────────┐
-                             │     [ USB ]     │
-                             │                 │
-     [+] 5V Breadboard Rail ◄┤ VIN         3V3 ├
-     [-] GND Breadboard Rail ◄┤ GND         GND ├
-                             │ D13         D15 │
-                             │ D12          D2 │ (Onboard Blue Status LED)
-                             │ D14          D4 │
-         HC-SR04 TRIG (Pin) ◄┤ GPIO 14     RX2 ├◄─── (GPIO 16) Printer TX (Optional)
-         HC-SR04 ECHO (Pin) ◄┤ GPIO 27     TX2 ├────► (GPIO 17) Printer RX (Print Data)
-                             │ D26        GPIO │
-           Buzzer (+) (Pin) ◄┤ GPIO 25    D18  │
-                             │ D33         D19 │
-                             │ D32         D21 │
-                             │ D35         D22 │
-                             │ D34         D23 │
-                             └─────────────────┘
+
+---
+
+### 3.2 Visual Wiring Guide for Each Sensor
+
+#### A. Powering the Rails (First Step)
+1. **Red 5V Rail**: Run a short jumper wire from breadboard hole **`a19`** (ESP32 `VIN`) into any hole on the **Red `+` rail**.
+2. **Blue GND Rail**: Run a short jumper wire from breadboard hole **`a20`** (ESP32 `GND`) into any hole on the **Blue `-` rail**.
+
+```text
+  [+] Red Rail:  ●══════════════════════════════════════════╗ (5V Power)
+                                                            ║
+  [-] Blue Rail: ■═══════════════════════════╗ (GND Return) ║
+                                             ║              ║
+   Breadboard Holes:       a20 [GND] ────────╝              ║
+                           a19 [VIN] ───────────────────────╝
+```
+
+---
+
+#### B. IR Obstacle / Proximity Sensor Wiring
+If you are using the standard 3-pin Infrared Obstacle Sensor module:
+
+```text
+       ┌────────────────────────┐
+       │   IR OBSTACLE SENSOR   │
+       │   [TX LED]   [RX LED]  │
+       │                        │
+       │   [VCC]  [GND]  [OUT]  │
+       └─────┬──────┬──────┬────┘
+             │      │      │
+             │      │      └────────► Breadboard Hole a13 (ESP32 GPIO 14)
+             │      └───────────────► Blue Rail [ - ] (Ground)
+             └──────────────────────► Red Rail  [ + ] (5V Power)
+```
+
+---
+
+#### C. HC-SR04 Ultrasonic Distance Sensor Wiring
+If you are using the 4-pin Ultrasonic Transducer:
+
+```text
+       ┌────────────────────────────┐
+       │    HC-SR04 ULTRASONIC      │
+       │    (( T ))      (( R ))    │
+       │                            │
+       │   [VCC] [TRIG] [ECHO] [GND]│
+       └─────┬─────┬──────┬──────┬──┘
+             │     │      │      │
+             │     │      │      └──► Blue Rail [ - ] (Ground)
+             │     │      └─────────► Breadboard Hole a12 (ESP32 GPIO 27)
+             │     └────────────────► Breadboard Hole a13 (ESP32 GPIO 14)
+             └──────────────────────► Red Rail  [ + ] (5V Power)
+```
+
+---
+
+#### D. Active Piezo Buzzer Wiring
+For instant audible chirps when a bottle drops into the bin:
+
+```text
+            ┌───────────────┐
+            │ PIEZO BUZZER  │
+            │   (+)   (-)   │
+            └───┬───────┬───┘
+                │       │
+                │       └───────────► Blue Rail [ - ] (Ground)
+                └───────────────────► Breadboard Hole a10 (ESP32 GPIO 25)
 ```
 
 ---
