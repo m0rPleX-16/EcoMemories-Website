@@ -201,15 +201,66 @@ Grab **8 Dupont jumper wires** (Male-to-Male or Male-to-Female) and follow these
 ### 3.4 Physical Component Details & How to Plug Them In
 
 #### 1. The Active Piezo Buzzer (Audio Feedback)
-* **Identifying Polarity**:
-  * Look at the top of the black cylinder: there is a small sticker with a **`+`** symbol.
-  * Look at the two metal legs: the **longer leg is Positive (`+`)**, and the **shorter leg is Negative (`-`)**.
-* **Mounting on the Breadboard**:
-  * You can plug the Buzzer directly into the lower empty rows of your breadboard:
-    * Plug the **Longer leg (`+`)** into hole **`e23`**.
-    * Plug the **Shorter leg (`-`)** into hole **`e24`**.
-    * Run a jumper from **`a9`** (ESP32 `D25`, Row 9) to hole **`a23`**.
-    * Run a jumper from the **Blue Ground Rail (`-`)** to hole **`a24`**.
+
+The buzzer has **only 2 pins (legs)** and requires **only 2 connections**:
+1. **Signal (`+`)**: Connects to ESP32 **`GPIO 25`** (labeled **`D25`** on silkscreen, at **Row 9, Hole `a9`**).
+2. **Ground (`-`)**: Connects to the **Blue Ground Rail (`-`)** (or any ESP32 `GND`).
+
+---
+
+##### Step A: Identify Buzzer Polarity
+* Look at the top of the black cylinder: there is a sticker or embossed **`+`** symbol marking the positive terminal.
+* Look at the two metal legs:
+  * **Longer leg = POSITIVE (`+`)** (receives the sound signal from `D25`).
+  * **Shorter leg = NEGATIVE (`-`)** (ground return).
+
+---
+
+##### Step B: How to Plug It In (Choose Option 1 or Option 2)
+
+###### Option 1: Mounted Directly on Breadboard (Cleanest)
+> [!NOTE]
+> **Breadboard Rule:** Holes in the same numbered row (e.g. `a23, b23, c23, d23, e23`) are electrically connected together underneath. **Never plug both legs of the buzzer into the same row**, or it will short out!
+
+1. Push the buzzer into the empty area at the bottom:
+   * Plug the **Longer leg (`+`)** into **Hole `e23`** (Row 23).
+   * Plug the **Shorter leg (`-`)** into **Hole `e24`** (Row 24).
+2. Connect the two jumper wires:
+   * **Orange Jumper:** From **Hole `a9`** (ESP32 `D25`) $\rightarrow$ to **Hole `a23`** (links through Row 23 into the Long leg `+`).
+   * **Black Jumper:** From the **Blue Ground Rail (`-`)** $\rightarrow$ to **Hole `a24`** (links through Row 24 into the Short leg `-`).
+
+```text
+       (+) LONGER LEG  ──► Plugs into Hole e23 (Row 23)
+       (-) SHORTER LEG ──► Plugs into Hole e24 (Row 24)
+
+       Row 23 strip: [ a23 ································· e23 (Buzzer +) ]
+       Row 24 strip: [ a24 ································· e24 (Buzzer -) ]
+
+       [Orange Jumper]  Hole a9 (ESP32 D25, Row 9)  ────►  Hole a23
+       [Black Jumper]   Blue Ground Rail (-)        ────►  Hole a24
+```
+
+###### Option 2: Direct Wiring with Dupont Jumpers (Fastest)
+If you have Female-to-Male jumper wires, you don't even need to use rows 23 and 24:
+1. Connect the **Long leg (`+`)** directly to **Hole `a9`** (ESP32 `D25`).
+2. Connect the **Short leg (`-`)** directly to any hole on the **Blue Ground Rail (`-`)**.
+
+###### Option 3: If You Have a 3-Pin Buzzer Module (Small PCB with 3 Pins)
+If your buzzer comes mounted on a small breakout board with 3 pins labeled `VCC`, `GND`, and `I/O` (or `S`):
+* **`I/O` or `S` (Signal)** $\rightarrow$ **Hole `a9`** (ESP32 `D25`).
+* **`VCC` or `+` (Power)** $\rightarrow$ **Red Power Rail (`+`)** (5V).
+* **`GND` or `-` (Ground)** $\rightarrow$ **Blue Ground Rail (`-`)**.
+
+---
+
+##### Step C: Instant 2-Second Test (Verify Buzzer Works Right Now)
+Want to be 100% sure your buzzer is active and functioning before running code?
+1. Make sure your ESP32 is powered via USB (so the breadboard power rails are active).
+2. Take the buzzer and touch:
+   * The **Long leg (`+`)** directly to the **Red Rail (`+`)** (5V).
+   * The **Short leg (`-`)** directly to the **Blue Rail (`-`)** (GND).
+3. If it emits a loud continuous **BEEEEEEP**, it is 100% functional!
+4. Now simply move that Long leg connection from the Red Rail over to **`a9` (`D25`)**. When the ESP32 turns on `D25`, it will chirp on item deposit!
 
 ---
 
