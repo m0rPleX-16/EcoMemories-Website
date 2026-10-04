@@ -483,6 +483,31 @@ void handleSimulateDeposit() {
     server.send(success ? 200 : 500, "application/json", success ? "{\"success\":true}" : "{\"error\":\"Failed\"}");
 }
 
+void handleSensorDebug() {
+    handleCors();
+    JSON_DOC(doc, 256);
+#if SENSOR_MODE_IR
+    doc["mode"] = "IR";
+    doc["raw_pin"] = digitalRead(PROXIMITY_PIN);
+    doc["detected"] = (digitalRead(PROXIMITY_PIN) == LOW);
+#else
+    doc["mode"] = "ULTRASONIC";
+    digitalWrite(PROXIMITY_PIN, LOW);
+    delayMicroseconds(2);
+    digitalWrite(PROXIMITY_PIN, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(PROXIMITY_PIN, LOW);
+    long duration = pulseIn(ULTRASONIC_ECHO_PIN, HIGH, 30000);
+    float dist = (duration == 0) ? -1.0f : (duration * 0.034f / 2.0f);
+    doc["duration_us"] = duration;
+    doc["distance_cm"] = dist;
+    doc["detected"] = (dist > 2.0f && dist < 30.0f);
+#endif
+    String resp;
+    serializeJson(doc, resp);
+    server.send(200, "application/json", resp);
+}
+
 // ─── Sensor Polling ───────────────────────────────────────────────────────────
 
 bool isObjectDetected() {
@@ -500,7 +525,11 @@ bool isObjectDetected() {
     long duration = pulseIn(ULTRASONIC_ECHO_PIN, HIGH, 30000);
     if (duration == 0) return false;
     float distanceCm = duration * 0.034f / 2.0f;
-    return (distanceCm > 2.0f && distanceCm < 15.0f); // Detect item inside chute
+    if (distanceCm > 2.0f && distanceCm < 30.0f) {
+        Serial.printf("[ULTRASONIC] Object detected at %.1f cm (duration: %ld us)\n", distanceCm, duration);
+        return true;
+    }
+    return false;
 #endif
 }
 
@@ -631,6 +660,7 @@ void setup() {
     server.on("/print", HTTP_POST, handlePrint);
     server.on("/print-chunk", HTTP_POST, handlePrintChunk);
     server.on("/simulate/deposit", HTTP_POST, handleSimulateDeposit);
+    server.on("/sensor", HTTP_GET, handleSensorDebug);
 
     // Options for CORS Preflight
     server.on("/status", HTTP_OPTIONS, handleOptions);
@@ -638,6 +668,7 @@ void setup() {
     server.on("/print", HTTP_OPTIONS, handleOptions);
     server.on("/print-chunk", HTTP_OPTIONS, handleOptions);
     server.on("/simulate/deposit", HTTP_OPTIONS, handleOptions);
+    server.on("/sensor", HTTP_OPTIONS, handleOptions);
 
     server.begin();
     Serial.printf("[SERVER] ✓ Local Kiosk Server listening on http://%s:%d\n",

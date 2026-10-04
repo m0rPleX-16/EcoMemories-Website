@@ -28,7 +28,7 @@
 
 // --- 4. Hardware Pin Mapping (ESP32 DevKit V1) ---
 // Proximity / Object Detection (IR obstacle sensor or HC-SR04 ultrasonic)
-#define SENSOR_MODE_IR        1     // Set to 1 for IR sensor, 0 for HC-SR04 ultrasonic
+#define SENSOR_MODE_IR        0     // Set to 1 for IR sensor, 0 for HC-SR04 ultrasonic
 #define PROXIMITY_PIN         14    // IR sensor digital OUT (or HC-SR04 TRIG)
 #define ULTRASONIC_ECHO_PIN   27    // Only used if SENSOR_MODE_IR is 0
 
