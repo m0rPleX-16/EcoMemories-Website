@@ -6,7 +6,6 @@ services:
     name: ecomemories-web
     runtime: docker
     plan: free
-    region: singapore
     dockerfilePath: ./Dockerfile
     healthCheckPath: /
     envVars:
@@ -36,5 +35,4 @@ services:
 databases:
   - name: ecomemories-db
     plan: free
-    region: singapore
     databaseName: ecophotobooth_website
