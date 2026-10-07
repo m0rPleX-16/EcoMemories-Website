@@ -17,6 +17,8 @@ import {
     X,
     ZoomIn,
     Share2,
+    RotateCcw,
+    Check,
 } from 'lucide-react';
 
 export default function PhotoPage() {
@@ -31,6 +33,7 @@ export default function PhotoPage() {
     const [deleting, setDeleting] = useState(false);
     const [deleted, setDeleted] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
+    const [copiedLink, setCopiedLink] = useState(false);
 
     useEffect(() => {
         if (!reference) return;
@@ -50,8 +53,6 @@ export default function PhotoPage() {
 
         fetchPhoto();
     }, [reference]);
-
-    const [copiedLink, setCopiedLink] = useState(false);
 
     const handleShare = async () => {
         if (!photo) return;
@@ -218,28 +219,25 @@ export default function PhotoPage() {
     const imageUrl = photo.public_url || `/storage/${photo.storage_path}`;
 
     return (
-        <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-10 max-w-4xl mx-auto w-full">
+        <main className="flex-1 flex flex-col items-center justify-center px-3 sm:px-6 py-4 sm:py-8 max-w-2xl mx-auto w-full">
             {/* Header */}
-            <div className="text-center mb-6 sm:mb-8 animate-fade-in-up px-2">
-                <div className="inline-flex items-center gap-2 mb-2 sm:mb-3 flex-wrap justify-center">
-                    <span className="pill-mono">
+            <div className="text-center mb-3 sm:mb-5 animate-fade-in-up px-2">
+                <div className="inline-flex items-center gap-2 mb-1.5 flex-wrap justify-center">
+                    <span className="pill-mono text-[10px] sm:text-xs">
                         <Leaf className="w-3 h-3 text-[#C5A059]" />
-                        ECO SOUVENIR EDITION
+                        ECO SOUVENIR
                     </span>
-                    <span className="pill-gold">
-                        REF #{photo.reference_code}
+                    <span className="pill-gold text-[10px] sm:text-xs">
+                        #{photo.reference_code}
                     </span>
                 </div>
 
-                <h1 className="text-2xl sm:text-4xl md:text-5xl font-serif-editorial text-[#0E3E2B] mb-2 leading-tight">
-                    Eco Photostrip{' '}
-                    <span className="highlight-gold">
-                        {photo.reference_code}
-                    </span>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif-editorial text-[#0E3E2B] mb-1 leading-tight">
+                    Your Eco Keepsake
                 </h1>
-                <p className="text-[11px] sm:text-xs md:text-sm text-[#52635C] flex items-center justify-center gap-1.5 font-mono flex-wrap">
-                    <Calendar className="w-3.5 h-3.5 text-[#C5A059] flex-shrink-0" />
-                    <span>CAPTURED ON {new Date(photo.created_at).toLocaleDateString('en-US', {
+                <p className="text-[10px] sm:text-xs text-[#52635C] flex items-center justify-center gap-1.5 font-mono">
+                    <Calendar className="w-3 h-3 text-[#C5A059] flex-shrink-0" />
+                    <span>{new Date(photo.created_at).toLocaleDateString('en-US', {
                         year: 'numeric',
                         month: 'short',
                         day: 'numeric',
@@ -248,7 +246,7 @@ export default function PhotoPage() {
             </div>
 
             {/* Photostrip Card Container with Click-to-Zoom */}
-            <div className="editorial-card p-3 sm:p-4 mb-6 sm:mb-8 shadow-md animate-scale-in max-w-xs sm:max-w-sm w-full flex flex-col items-center group">
+            <div className="editorial-card p-2.5 sm:p-3.5 mb-3.5 sm:mb-5 shadow-md animate-scale-in max-w-xs sm:max-w-sm w-full flex flex-col items-center group">
                 <div
                     onClick={() => setLightboxOpen(true)}
                     className="relative cursor-zoom-in overflow-hidden rounded-lg w-full flex justify-center bg-[#FAF8F5] border border-[#E8E3D5] group-hover:border-[#0E3E2B] transition-colors"
@@ -256,60 +254,109 @@ export default function PhotoPage() {
                     <img
                         src={imageUrl}
                         alt={`EcoMemories Photostrip ${photo.reference_code}`}
-                        className="max-h-[480px] sm:max-h-[640px] w-auto object-contain transition-transform duration-300 group-hover:scale-[1.02]"
+                        className="max-h-[46vh] sm:max-h-[540px] w-auto object-contain transition-transform duration-300 group-hover:scale-[1.02]"
                     />
 
-                    {/* Floating Hover Badge */}
-                    <div className="absolute bottom-3 inset-x-3 flex items-center justify-center opacity-90 group-hover:opacity-100 transition-opacity">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0E3E2B]/85 backdrop-blur-xs text-white text-[10px] sm:text-[11px] font-mono tracking-wider uppercase font-semibold shadow-md">
-                            <ZoomIn className="w-3.5 h-3.5 text-[#D4AF37]" />
-                            <span>Click to Preview & Zoom</span>
+                    {/* Floating Zoom Indicator Pill */}
+                    <div className="absolute bottom-2.5 inset-x-2.5 flex items-center justify-center opacity-90 group-hover:opacity-100 transition-opacity">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0E3E2B]/85 backdrop-blur-xs text-white text-[10px] font-mono tracking-wider uppercase font-semibold shadow-md">
+                            <ZoomIn className="w-3 h-3 text-[#D4AF37]" />
+                            <span>Tap to Zoom</span>
                         </span>
                     </div>
                 </div>
+
+                {/* Copied Link Toast Indicator */}
+                {copiedLink && (
+                    <div className="mt-2 text-center text-xs font-mono text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg py-1 px-3 animate-fade-in w-full flex items-center justify-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Link copied to clipboard!</span>
+                    </div>
+                )}
             </div>
 
-            {/* Actions */}
-            <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-2.5 sm:gap-3 mb-6 sm:mb-8 animate-fade-in-up stagger-2 w-full max-w-md sm:max-w-none">
-                <button onClick={() => setLightboxOpen(true)} className="btn-primary text-sm px-6 py-3 w-full sm:w-auto">
-                    <ZoomIn className="w-4 h-4 text-[#D4AF37]" />
-                    <span>Preview & Zoom</span>
+            {/* COMPACT RESPONSIVE ACTION DOCK (Primary Save + Icon Toolbar) */}
+            <div className="w-full max-w-xs sm:max-w-sm flex flex-col gap-2.5 mb-5 sm:mb-6 animate-fade-in-up stagger-1">
+                {/* Primary Action Button: Save to Device */}
+                <button
+                    onClick={handleDownload}
+                    className="btn-primary w-full py-3.5 text-sm sm:text-base flex items-center justify-center gap-2 shadow-md"
+                >
+                    <Download className="w-4 h-4 text-[#D4AF37]" />
+                    <span>Save Photostrip</span>
                 </button>
-                <button onClick={handleDownload} className="btn-secondary text-sm px-6 py-3 w-full sm:w-auto">
-                    <Download className="w-4 h-4 text-[#C5A059]" />
-                    <span>Download High-Res</span>
-                </button>
-                <button onClick={handleShare} className="btn-secondary text-sm px-6 py-3 w-full sm:w-auto">
-                    <Share2 className="w-4 h-4 text-[#C5A059]" />
-                    <span>{copiedLink ? 'Link Copied!' : 'Share Souvenir'}</span>
-                </button>
-                <button onClick={handlePrint} className="btn-secondary text-sm px-6 py-3 w-full sm:w-auto">
-                    <Printer className="w-4 h-4 text-[#C5A059]" />
-                    <span>Print Strip</span>
-                </button>
-                <Link to="/" className="btn-secondary text-sm px-6 py-3 inline-flex items-center justify-center gap-1.5 w-full sm:w-auto">
-                    <ArrowLeft className="w-3.5 h-3.5" />
-                    <span>New Session</span>
-                </Link>
+
+                {/* Streamlined Icon Action Cluster */}
+                <div className="flex items-center justify-between gap-2 p-1.5 bg-white rounded-2xl border border-[#E8E3D5] shadow-xs">
+                    {/* Share Button */}
+                    <button
+                        onClick={handleShare}
+                        title="Share Souvenir"
+                        aria-label="Share"
+                        className="flex-1 py-2.5 px-2 rounded-xl hover:bg-[#F4EFE6] text-[#0E3E2B] flex flex-col items-center justify-center gap-1 transition-all active:scale-95 group"
+                    >
+                        <Share2 className="w-4 h-4 text-[#C5A059] group-hover:scale-110 transition-transform" />
+                        <span className="text-[10px] font-mono font-semibold text-[#52635C]">Share</span>
+                    </button>
+
+                    <div className="w-px h-6 bg-[#E8E3D5]" />
+
+                    {/* Zoom / Lightbox Button */}
+                    <button
+                        onClick={() => setLightboxOpen(true)}
+                        title="Inspect in High-Res"
+                        aria-label="Inspect"
+                        className="flex-1 py-2.5 px-2 rounded-xl hover:bg-[#F4EFE6] text-[#0E3E2B] flex flex-col items-center justify-center gap-1 transition-all active:scale-95 group"
+                    >
+                        <ZoomIn className="w-4 h-4 text-[#0E3E2B] group-hover:scale-110 transition-transform" />
+                        <span className="text-[10px] font-mono font-semibold text-[#52635C]">Zoom</span>
+                    </button>
+
+                    <div className="w-px h-6 bg-[#E8E3D5]" />
+
+                    {/* Print Button */}
+                    <button
+                        onClick={handlePrint}
+                        title="Print Souvenir"
+                        aria-label="Print"
+                        className="flex-1 py-2.5 px-2 rounded-xl hover:bg-[#F4EFE6] text-[#0E3E2B] flex flex-col items-center justify-center gap-1 transition-all active:scale-95 group"
+                    >
+                        <Printer className="w-4 h-4 text-[#0E3E2B] group-hover:scale-110 transition-transform" />
+                        <span className="text-[10px] font-mono font-semibold text-[#52635C]">Print</span>
+                    </button>
+
+                    <div className="w-px h-6 bg-[#E8E3D5]" />
+
+                    {/* Return to Kiosk / New Session */}
+                    <Link
+                        to="/"
+                        title="Start New Session"
+                        aria-label="New Session"
+                        className="flex-1 py-2.5 px-2 rounded-xl hover:bg-[#F4EFE6] text-[#0E3E2B] flex flex-col items-center justify-center gap-1 transition-all active:scale-95 group"
+                    >
+                        <RotateCcw className="w-4 h-4 text-[#0E3E2B] group-hover:scale-110 transition-transform" />
+                        <span className="text-[10px] font-mono font-semibold text-[#52635C]">New</span>
+                    </Link>
+                </div>
+            </div>
+
+            {/* Environmental Eco Impact Note */}
+            <div className="text-center mb-4 animate-fade-in-up stagger-2 flex items-center justify-center gap-1.5 px-2">
+                <Sparkles className="w-3 h-3 text-[#C5A059] flex-shrink-0" />
+                <p className="text-[10px] font-mono text-[#83948C] tracking-wider uppercase">
+                    5 Items Recycled • 1 Keepsake Preserved
+                </p>
             </div>
 
             {/* Compliance Erasure Request Option */}
-            <div className="mb-8 text-center animate-fade-in-up stagger-3">
+            <div className="text-center animate-fade-in-up stagger-3">
                 <button
                     onClick={() => setShowDeleteModal(true)}
-                    className="text-xs font-mono text-[#83948C] hover:text-red-700 transition-colors inline-flex items-center gap-1.5 uppercase tracking-wider underline"
+                    className="text-[10px] font-mono text-[#83948C] hover:text-red-700 transition-colors inline-flex items-center gap-1 uppercase tracking-wider underline"
                 >
                     <Trash2 className="w-3 h-3 text-red-500" />
-                    <span>Request Data Erasure / Delete Photo</span>
+                    <span>Delete Photo (GDPR Erasure)</span>
                 </button>
-            </div>
-
-            {/* Environmental Footer */}
-            <div className="text-center animate-fade-in-up stagger-4 flex items-center justify-center gap-2 px-2">
-                <Sparkles className="w-3 h-3 text-[#C5A059] flex-shrink-0" />
-                <p className="text-[10px] sm:text-[11px] font-mono text-[#83948C] tracking-wider uppercase">
-                    Every recycled item counts • Turn waste into lasting memories
-                </p>
             </div>
 
             {/* Lightbox Zoom Modal */}
