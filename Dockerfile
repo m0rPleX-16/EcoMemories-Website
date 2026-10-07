@@ -15,9 +15,9 @@ COPY public ./public
 RUN npm run build
 
 # ==============================================================================
-#  Stage 2: Production PHP 8.3 + Apache Web Server
+#  Stage 2: Production PHP 8.4 + Apache Web Server
 # ==============================================================================
-FROM php:8.3-apache
+FROM php:8.4-apache
 
 # Install required system packages and PHP extensions
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -66,7 +66,7 @@ COPY . .
 COPY --from=frontend-builder /app/public/build ./public/build
 
 # Install PHP production dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist --ignore-platform-reqs
 
 # Set directory permissions for Laravel storage and cache
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
