@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Download } from 'lucide-react';
 
 interface ImageLightboxModalProps {
@@ -18,9 +19,13 @@ export default function ImageLightboxModal({
     referenceCode,
     onDownload,
 }: ImageLightboxModalProps) {
-    // Keyboard Escape to dismiss
+    // Keyboard Escape to dismiss & lock body scroll while modal is active
     useEffect(() => {
         if (!isOpen) return;
+
+        const originalOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
                 onClose();
@@ -28,14 +33,17 @@ export default function ImageLightboxModal({
         };
 
         window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        return () => {
+            document.body.style.overflow = originalOverflow;
+            window.removeEventListener('keydown', handleKeyDown);
+        };
     }, [isOpen, onClose]);
 
     if (!isOpen) return null;
 
-    return (
+    const modalContent = (
         <div
-            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fade-in select-none cursor-pointer"
+            className="fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fade-in select-none cursor-pointer"
             onClick={onClose}
         >
             {/* Minimal Top-Right Floating Controls */}
@@ -84,4 +92,9 @@ export default function ImageLightboxModal({
             </div>
         </div>
     );
+
+    // Render directly into document.body to stay in top-level stacking context above navbar & layout
+    return typeof document !== 'undefined'
+        ? createPortal(modalContent, document.body)
+        : modalContent;
 }
