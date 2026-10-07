@@ -55,7 +55,10 @@ class SessionController extends Controller
      */
     private function notifyBridgeSession(string $sessionCode): void
     {
-        $bridgeUrl = env('VITE_BRIDGE_URL', 'http://192.168.1.8:3333');
+        $cachedIp = cache()->get('esp32_bridge_ip');
+        $bridgeUrl = $cachedIp
+            ? (str_starts_with($cachedIp, 'http') ? $cachedIp : "http://{$cachedIp}:3333")
+            : env('VITE_BRIDGE_URL', 'http://192.168.1.8:3333');
         $eventUrl = url('/api/devices/events');
 
         try {

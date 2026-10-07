@@ -98,8 +98,9 @@ class DeviceEventController extends Controller
             'event_id' => $validated['event_id'],
         ]);
 
-        // 5. Update device last seen
+        // 5. Update device last seen & remember its local IP address
         $device->update(['last_seen_at' => now()]);
+        cache()->put('esp32_bridge_ip', $request->ip(), now()->addDays(7));
 
         // 6. Audit trail
         $transactionService->record($session, 'deposit_recorded', $deposit->id, [

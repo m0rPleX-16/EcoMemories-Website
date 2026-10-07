@@ -18,6 +18,17 @@ Route::middleware('throttle:60,1')->group(function () {
 
     // Device Events (the real device-facing endpoint per README §11)
     Route::post('/devices/events', [DeviceEventController::class, 'store']);
+    Route::post('/devices/announce', function (\Illuminate\Http\Request $request) {
+        $ip = $request->input('ip', $request->ip());
+        cache()->put('esp32_bridge_ip', $ip, now()->addDays(7));
+        \Illuminate\Support\Facades\Log::info("[ESP32] Device auto-registered at IP: {$ip}");
+        return response()->json(['success' => true, 'registered_ip' => $ip]);
+    });
+    Route::get('/devices/bridge-status', function () {
+        $ip = cache()->get('esp32_bridge_ip') ?? env('VITE_BRIDGE_URL');
+        $url = $ip ? (str_starts_with($ip, 'http') ? $ip : "http://{$ip}:3333") : 'http://localhost:3333';
+        return response()->json(['bridge_url' => $url]);
+    });
 
     // Photo Sessions
     Route::post('/sessions/{sessionCode}/photo-sessions', [PhotoSessionController::class, 'store']);

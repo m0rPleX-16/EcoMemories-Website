@@ -715,6 +715,25 @@ void setup() {
     if (WiFi.status() == WL_CONNECTED) {
         Serial.printf("\n[WIFI] ✓ Connected! IP Address: %s\n", WiFi.localIP().toString().c_str());
         beepShort();
+
+        // Auto-announce ESP32 IP address to Laravel backend for zero-config bridge discovery
+        String announceUrl = currentEventUrl;
+        announceUrl.replace("/events", "/announce");
+        HTTPClient announceHttp;
+        WiFiClientSecure secClient;
+        WiFiClient stdClient;
+        if (announceUrl.startsWith("https://")) {
+            secClient.setInsecure();
+            announceHttp.begin(secClient, announceUrl);
+        } else {
+            announceHttp.begin(stdClient, announceUrl);
+        }
+        announceHttp.addHeader("Content-Type", "application/json");
+        int announceCode = announceHttp.POST("{\"device_id\":\"" + String(DEVICE_ID) + "\",\"ip\":\"" + WiFi.localIP().toString() + "\",\"port\":3333}");
+        if (announceCode == 200) {
+            Serial.println("[AUTO-DISCOVERY] ✓ Registered ESP32 IP with Laravel backend!");
+        }
+        announceHttp.end();
     } else {
         Serial.println("\n[WIFI] ! Failed to connect to Wi-Fi. Retrying in background...");
     }

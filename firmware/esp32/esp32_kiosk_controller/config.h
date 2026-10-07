@@ -11,13 +11,13 @@
 #define ENABLE_THERMAL_PRINTER 0    // 0 = Disabled (no thermal printer; receipt outputs to Serial Monitor & screen)
 
 // --- 1. Wi-Fi Configuration ---
-#define WIFI_SSID             "Andrade-ZTE"
-#define WIFI_PASSWORD         "22UcQ3zR"
+#define WIFI_SSID             "mayangela"
+#define WIFI_PASSWORD         "09292009"
 #define WIFI_CONNECT_TIMEOUT  15000 // Milliseconds before retrying
 
 // --- 2. Laravel Backend API Configuration ---
 // Set this to your laptop/server's local network IP (192.168.1.2)
-#define LARAVEL_EVENT_URL     "http://192.168.1.2:8000/api/devices/events"
+#define LARAVEL_EVENT_URL     "http://10.183.14.217:8000/api/devices/events"
 #define DEVICE_ID             "ESP32-001"
 #define DEVICE_SECRET         ""    // Leave empty if DEVICE_SECRET is not enforced in .env
 
