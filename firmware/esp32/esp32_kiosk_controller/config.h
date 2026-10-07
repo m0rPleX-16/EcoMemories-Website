@@ -16,8 +16,8 @@
 #define WIFI_CONNECT_TIMEOUT  15000 // Milliseconds before retrying
 
 // --- 2. Laravel Backend API Configuration ---
-// Set this to your laptop/server's local network IP (192.168.1.2)
-#define LARAVEL_EVENT_URL     "http://10.183.14.217:8000/api/devices/events"
+// Live Render Cloud URL (supports HTTPS automatically)
+#define LARAVEL_EVENT_URL     "https://ecomemories-web.onrender.com/api/devices/events"
 #define DEVICE_ID             "ESP32-001"
 #define DEVICE_SECRET         ""    // Leave empty if DEVICE_SECRET is not enforced in .env
 

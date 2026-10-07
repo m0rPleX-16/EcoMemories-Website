@@ -653,6 +653,63 @@ bool isObjectDetected() {
         }
     }
 
+// ─── Cloud Active Session Auto-Sync (Render.com) ─────────────────────────────
+
+unsigned long lastCloudPollTime = 0;
+
+void pollCloudActiveSession() {
+    if (WiFi.status() != WL_CONNECTED) return;
+    if (millis() - lastCloudPollTime < 2000) return; // Check every 2 seconds
+    lastCloudPollTime = millis();
+
+    String activeSessionUrl = currentEventUrl;
+    activeSessionUrl.replace("/events", "/active-session");
+
+    HTTPClient http;
+    WiFiClientSecure secClient;
+    WiFiClient stdClient;
+
+    if (activeSessionUrl.startsWith("https://")) {
+        secClient.setInsecure();
+        http.begin(secClient, activeSessionUrl);
+    } else {
+        http.begin(stdClient, activeSessionUrl);
+    }
+
+    http.setTimeout(2500);
+    int httpCode = http.GET();
+
+    if (httpCode == 200) {
+        String payload = http.getString();
+        JSON_DOC(doc, 256);
+        DeserializationError err = deserializeJson(doc, payload);
+        if (!err) {
+            bool isActive = doc["active"] | false;
+            String cloudSessionCode = doc["session_code"].as<String>();
+            int deposits = doc["deposits"] | 0;
+
+            if (isActive && cloudSessionCode.length() > 0) {
+                if (!hasActiveSession || activeSessionCode != cloudSessionCode) {
+                    activeSessionCode = cloudSessionCode;
+                    hasActiveSession = true;
+                    sessionDepositCount = deposits;
+                    Serial.printf("[CLOUD-SYNC] ★ Active session synced from Render: %s (deposits: %d/%d)\n",
+                                  activeSessionCode.c_str(), sessionDepositCount, MAX_DEPOSITS_PER_SESSION);
+                    beepShort();
+                } else {
+                    sessionDepositCount = deposits;
+                }
+            } else if (!isActive && hasActiveSession) {
+                Serial.println("[CLOUD-SYNC] Active session closed or completed on Render.");
+                activeSessionCode = "";
+                hasActiveSession = false;
+                sessionDepositCount = 0;
+            }
+        }
+    }
+    http.end();
+}
+
 // ─── Setup & Loop ─────────────────────────────────────────────────────────────
 
 void setup() {
@@ -779,4 +836,7 @@ void loop() {
         lastSensorCheckTime = millis();
         checkDepositSensors();
     }
+
+    // 4. Automatic Cloud Session Sync from Render (checks every 2 seconds)
+    pollCloudActiveSession();
 }
