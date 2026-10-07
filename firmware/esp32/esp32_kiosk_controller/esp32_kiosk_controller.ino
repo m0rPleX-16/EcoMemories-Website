@@ -247,6 +247,8 @@ bool sendDepositToLaravel(String sessionCode, float weight) {
         http.begin(standardClient, currentEventUrl);
     }
 
+    http.setReuse(true);
+    http.setTimeout(2500);
     http.addHeader("Content-Type", "application/json");
 
     if (strlen(DEVICE_SECRET) > 0) {
@@ -282,21 +284,17 @@ bool sendDepositToLaravel(String sessionCode, float weight) {
         DeserializationError err = deserializeJson(respDoc, response);
         if (!err) {
             bool rewardEarned = respDoc["reward_earned"] | false;
-            int deposits = respDoc["session"]["deposits"] | (sessionDepositCount + 1);
-            sessionDepositCount = deposits;
+            int deposits = respDoc["session"]["deposits"] | sessionDepositCount;
+            if (deposits > sessionDepositCount) {
+                sessionDepositCount = deposits;
+            }
 
             if (rewardEarned || sessionDepositCount >= MAX_DEPOSITS_PER_SESSION) {
                 sessionCompleted = true;
                 lastCompletedSessionCode = activeSessionCode;
-                Serial.printf("[API] ★ REWARD EARNED! Session completed (%d/%d deposits). Photo credit unlocked.\n",
+                Serial.printf("[API] ★ REWARD CONFIRMED by backend (%d/%d deposits).\n",
                               sessionDepositCount, MAX_DEPOSITS_PER_SESSION);
-                Serial.println("[API] 🔒 Session goal completed. Sensor hardware deactivated for this session.");
-                beepRewardUnlocked();
-            } else {
-                beepShort();
             }
-        } else {
-            beepShort();
         }
         success = true;
     } else {
@@ -589,22 +587,32 @@ bool isObjectDetected() {
 #if SENSOR_MODE_IR
     return digitalRead(PROXIMITY_PIN) == LOW;
 #else
-    // 1. Try default: 14 = TRIG, 27 = ECHO (Snappy 3000us timeout = ~51cm max)
-    pinMode(14, OUTPUT);
-    pinMode(27, INPUT);
-    digitalWrite(14, LOW); delayMicroseconds(2);
-    digitalWrite(14, HIGH); delayMicroseconds(10);
-    digitalWrite(14, LOW);
-    long duration = pulseIn(27, HIGH, 3000);
+    // Remember the functional pin mapping to eliminate redundant double timeouts
+    static int trigPin = 14;
+    static int echoPin = 27;
 
-    // 2. If no echo, try swapped: 27 = TRIG, 14 = ECHO
+    pinMode(trigPin, OUTPUT);
+    pinMode(echoPin, INPUT);
+    digitalWrite(trigPin, LOW); delayMicroseconds(2);
+    digitalWrite(trigPin, HIGH); delayMicroseconds(10);
+    digitalWrite(trigPin, LOW);
+    long duration = pulseIn(echoPin, HIGH, 2000); // 2000us max = ~34cm
+
+    // If no echo on cached pins, test alternate mapping once
     if (duration == 0) {
-        pinMode(27, OUTPUT);
-        pinMode(14, INPUT);
-        digitalWrite(27, LOW); delayMicroseconds(2);
-        digitalWrite(27, HIGH); delayMicroseconds(10);
-        digitalWrite(27, LOW);
-        duration = pulseIn(14, HIGH, 3000);
+        int altTrig = (trigPin == 14) ? 27 : 14;
+        int altEcho = (echoPin == 27) ? 14 : 27;
+        pinMode(altTrig, OUTPUT);
+        pinMode(altEcho, INPUT);
+        digitalWrite(altTrig, LOW); delayMicroseconds(2);
+        digitalWrite(altTrig, HIGH); delayMicroseconds(10);
+        digitalWrite(altTrig, LOW);
+        long altDuration = pulseIn(altEcho, HIGH, 2000);
+        if (altDuration > 0) {
+            trigPin = altTrig;
+            echoPin = altEcho;
+            duration = altDuration;
+        }
     }
 
     if (duration == 0) return false;
@@ -645,36 +653,29 @@ bool isObjectDetected() {
         }
 
         if (isObjectDetected()) {
-            digitalWrite(STATUS_LED_PIN, HIGH);
-            delay(30); // Fast settle time
-
+            lastDepositTime = millis();
             float weight = readWeightGrams();
             lastMeasuredWeight = weight;
-            lastDepositTime = millis();
 
-            Serial.printf("[SENSOR] Object detected! Measured weight: %.1fg\n", weight);
+            // ── 1. INSTANT LOCAL FEEDBACK (< 1ms) ──
+            // Beep and illuminate status LED immediately so the user experiences zero lag!
+            digitalWrite(STATUS_LED_PIN, HIGH);
+            beepShort();
+            sessionDepositCount++;
 
-#if ENABLE_WEIGHT_SENSOR
-            // Filter invalid weight or spurious vibration
-            if (weight > 0.0f && (weight < MIN_WEIGHT_GRAMS || weight > MAX_WEIGHT_GRAMS)) {
-                Serial.printf("[SENSOR] Weight %.1fg outside threshold (%0.1f - %0.1fg). Ignored.\n",
-                              weight, MIN_WEIGHT_GRAMS, MAX_WEIGHT_GRAMS);
-                beepError();
-                digitalWrite(STATUS_LED_PIN, LOW);
-                return;
-            }
-#endif
-
-            Serial.printf("[DEPOSIT] Valid deposit (%d/%d)! Forwarding to session: %s\n",
-                          sessionDepositCount + 1, MAX_DEPOSITS_PER_SESSION, activeSessionCode.c_str());
-            sendDepositToLaravel(activeSessionCode, weight);
+            Serial.printf("[SENSOR] Instant deposit trigger (%d/%d)! Measured weight: %.1fg\n",
+                          sessionDepositCount, MAX_DEPOSITS_PER_SESSION, weight);
 
             if (sessionDepositCount >= MAX_DEPOSITS_PER_SESSION) {
                 sessionCompleted = true;
                 lastCompletedSessionCode = activeSessionCode;
-                Serial.printf("[SENSOR] 🔒 Session %s reached 5/5 deposits! Sensor hardware deactivated.\n",
+                beepRewardUnlocked();
+                Serial.printf("[SENSOR] 🔒 Session %s reached 5/5 deposits! Celebratory chime played.\n",
                               activeSessionCode.c_str());
             }
+
+            // ── 2. Sync to Laravel Backend ──
+            sendDepositToLaravel(activeSessionCode, weight);
 
             digitalWrite(STATUS_LED_PIN, LOW);
         }
@@ -686,7 +687,16 @@ unsigned long lastCloudPollTime = 0;
 
 void pollCloudActiveSession() {
     if (WiFi.status() != WL_CONNECTED) return;
-    if (millis() - lastCloudPollTime < 2000) return; // Check every 2 seconds
+
+    // ── PERFORMANCE BOOST ──
+    // During an active session in progress, DO NOT do blocking HTTPS polling!
+    // A TLS handshake blocks loop() for 1.5s, freezing the sensor.
+    if (hasActiveSession && !sessionCompleted) {
+        return;
+    }
+
+    // When idle (waiting for a user session), poll every 4 seconds
+    if (millis() - lastCloudPollTime < 4000) return;
     lastCloudPollTime = millis();
 
     String activeSessionUrl = currentEventUrl;
@@ -703,7 +713,8 @@ void pollCloudActiveSession() {
         http.begin(stdClient, activeSessionUrl);
     }
 
-    http.setTimeout(2500);
+    http.setReuse(true);
+    http.setTimeout(2000);
     int httpCode = http.GET();
 
     if (httpCode == 200) {

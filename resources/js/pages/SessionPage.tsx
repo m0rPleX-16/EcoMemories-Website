@@ -103,9 +103,13 @@ export default function SessionPage() {
         fetchSession();
     }, [fetchSession]);
 
-    // Auto-poll session every 2 seconds so physical ESP32 deposits update the UI in real time
+    // High-frequency polling (700ms during deposit collection, 2000ms once complete)
+    // Ensures real-time responsiveness when physical items are inserted into the ESP32 chute
     useEffect(() => {
         if (!sessionCode || loading) return;
+
+        const isCollecting = depositCount < requiredDeposits;
+        const intervalMs = isCollecting ? 700 : 2000;
 
         const pollInterval = setInterval(async () => {
             try {
@@ -134,10 +138,10 @@ export default function SessionPage() {
             } catch {
                 // Ignore transient network errors
             }
-        }, 2000);
+        }, intervalMs);
 
         return () => clearInterval(pollInterval);
-    }, [sessionCode, loading]);
+    }, [sessionCode, loading, depositCount, requiredDeposits]);
 
     // Register / deregister session with the local hardware bridge / ESP32.
     useEffect(() => {
@@ -146,26 +150,38 @@ export default function SessionPage() {
         return () => { clearSessionFromBridge(); };
     }, [sessionCode, loading]);
 
-    // Poll bridge / ESP32 /status every 8 seconds for the hardware indicator badge.
+    // Poll bridge / ESP32 /status every 1.5 seconds for instant local deposit sync & hardware indicator badge.
     useEffect(() => {
         if (!sessionCode) return;
 
         const pollStatus = async () => {
             try {
                 const res = await fetch(`${BRIDGE_URL}/status`, {
-                    signal: AbortSignal.timeout(3000),
+                    signal: AbortSignal.timeout(1000),
                 });
                 if (!res.ok) { setHardwareStatus('unreachable'); return; }
                 const data = await res.json();
                 const isConnected = !!(data.serial_connected || data.wifi_connected || data.status === 'online');
                 setHardwareStatus(isConnected ? 'connected' : 'offline');
+
+                // Instant Local Bridge Deposit Sync (< 50ms)
+                if (typeof data.deposits_this_session === 'number') {
+                    setDepositCount((prevCount) => {
+                        if (data.deposits_this_session > prevCount) {
+                            setRecentDeposit(true);
+                            setTimeout(() => setRecentDeposit(false), 2000);
+                            return data.deposits_this_session;
+                        }
+                        return prevCount;
+                    });
+                }
             } catch {
                 setHardwareStatus('unreachable');
             }
         };
 
         pollStatus();
-        statusPollRef.current = setInterval(pollStatus, 8000);
+        statusPollRef.current = setInterval(pollStatus, 1500);
 
         return () => {
             if (statusPollRef.current) clearInterval(statusPollRef.current);
