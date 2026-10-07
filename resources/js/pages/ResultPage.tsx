@@ -17,6 +17,8 @@ import {
     Check,
     Eye,
     Loader2,
+    Share2,
+    Copy,
 } from 'lucide-react';
 
 const BRIDGE_URL = (import.meta.env.VITE_BRIDGE_URL as string | undefined) || 'http://192.168.1.8:3333';
@@ -54,6 +56,30 @@ export default function ResultPage() {
 
     const photoUrl = `${window.location.origin}/photo/${photo.reference_code}`;
     const imageSrc = photo.public_url || `/storage/${photo.storage_path}`;
+
+    const [copiedLink, setCopiedLink] = useState(false);
+
+    const handleShare = async () => {
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'EcoMemories Photostrip Souvenir',
+                    text: `Check out my EcoMemories photostrip #${photo.reference_code}! Earned by recycling 5 items.`,
+                    url: photoUrl,
+                });
+            } catch {
+                // User cancelled or share dismissed
+            }
+        } else {
+            try {
+                await navigator.clipboard.writeText(photoUrl);
+                setCopiedLink(true);
+                setTimeout(() => setCopiedLink(false), 2500);
+            } catch {
+                window.open(photoUrl, '_blank');
+            }
+        }
+    };
 
     const handleDownload = async () => {
         try {
@@ -402,6 +428,10 @@ export default function ResultPage() {
                 <button onClick={handleDownload} className="btn-secondary text-sm px-6 py-3 w-full sm:w-auto">
                     <Download className="w-4 h-4 text-[#C5A059]" />
                     <span>Download Photostrip</span>
+                </button>
+                <button onClick={handleShare} className="btn-secondary text-sm px-6 py-3 w-full sm:w-auto">
+                    <Share2 className="w-4 h-4 text-[#C5A059]" />
+                    <span>{copiedLink ? 'Link Copied!' : 'Share Souvenir'}</span>
                 </button>
                 <button
                     onClick={handleThermalPrint}

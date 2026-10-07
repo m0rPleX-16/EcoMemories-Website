@@ -16,6 +16,7 @@ import {
     CheckCircle2,
     X,
     ZoomIn,
+    Share2,
 } from 'lucide-react';
 
 export default function PhotoPage() {
@@ -49,6 +50,32 @@ export default function PhotoPage() {
 
         fetchPhoto();
     }, [reference]);
+
+    const [copiedLink, setCopiedLink] = useState(false);
+
+    const handleShare = async () => {
+        if (!photo) return;
+        const currentUrl = window.location.href;
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: `EcoMemories Photostrip #${photo.reference_code}`,
+                    text: `Check out my EcoMemories keepsake photostrip #${photo.reference_code}! Earned by recycling 5 items.`,
+                    url: currentUrl,
+                });
+            } catch {
+                // dismissed
+            }
+        } else {
+            try {
+                await navigator.clipboard.writeText(currentUrl);
+                setCopiedLink(true);
+                setTimeout(() => setCopiedLink(false), 2500);
+            } catch {
+                // fallback
+            }
+        }
+    };
 
     const handleDownload = async () => {
         if (!photo) return;
@@ -251,6 +278,10 @@ export default function PhotoPage() {
                 <button onClick={handleDownload} className="btn-secondary text-sm px-6 py-3 w-full sm:w-auto">
                     <Download className="w-4 h-4 text-[#C5A059]" />
                     <span>Download High-Res</span>
+                </button>
+                <button onClick={handleShare} className="btn-secondary text-sm px-6 py-3 w-full sm:w-auto">
+                    <Share2 className="w-4 h-4 text-[#C5A059]" />
+                    <span>{copiedLink ? 'Link Copied!' : 'Share Souvenir'}</span>
                 </button>
                 <button onClick={handlePrint} className="btn-secondary text-sm px-6 py-3 w-full sm:w-auto">
                     <Printer className="w-4 h-4 text-[#C5A059]" />
