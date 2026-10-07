@@ -20,26 +20,14 @@ services:
         generateValue: true
       - key: DB_CONNECTION
         value: pgsql
-      - key: DB_HOST
+      - key: DATABASE_URL
         fromDatabase:
           name: ecomemories-db
-          property: host
-      - key: DB_PORT
+          property: connectionString
+      - key: DB_URL
         fromDatabase:
           name: ecomemories-db
-          property: port
-      - key: DB_DATABASE
-        fromDatabase:
-          name: ecomemories-db
-          property: database
-      - key: DB_USERNAME
-        fromDatabase:
-          name: ecomemories-db
-          property: user
-      - key: DB_PASSWORD
-        fromDatabase:
-          name: ecomemories-db
-          property: password
+          property: connectionString
       - key: SESSION_DRIVER
         value: database
       - key: CACHE_STORE
@@ -47,7 +35,6 @@ services:
 
 databases:
   - name: ecomemories-db
-    databaseName: ecophotobooth_website
-    user: postgres
     plan: free
     region: singapore
+    databaseName: ecophotobooth_website
