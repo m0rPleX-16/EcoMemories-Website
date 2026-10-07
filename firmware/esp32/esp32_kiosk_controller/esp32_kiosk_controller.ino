@@ -47,6 +47,8 @@ bool hx711Ready = false;
 
 String activeSessionCode = "";
 bool hasActiveSession = false;
+bool sessionCompleted = false;
+String lastCompletedSessionCode = "";
 unsigned long lastDepositTime = 0;
 unsigned long lastSensorCheckTime = 0;
 int sessionDepositCount = 0;
@@ -284,9 +286,11 @@ bool sendDepositToLaravel(String sessionCode, float weight) {
             sessionDepositCount = deposits;
 
             if (rewardEarned || sessionDepositCount >= MAX_DEPOSITS_PER_SESSION) {
+                sessionCompleted = true;
+                lastCompletedSessionCode = activeSessionCode;
                 Serial.printf("[API] ★ REWARD EARNED! Session completed (%d/%d deposits). Photo credit unlocked.\n",
                               sessionDepositCount, MAX_DEPOSITS_PER_SESSION);
-                Serial.println("[API] 🔒 Session goal completed. Sensor input paused for this session.");
+                Serial.println("[API] 🔒 Session goal completed. Sensor hardware deactivated for this session.");
                 beepRewardUnlocked();
             } else {
                 beepShort();
@@ -300,7 +304,9 @@ bool sendDepositToLaravel(String sessionCode, float weight) {
         Serial.printf("[API] ✗ Error (%d): %s\n", httpCode, errorMsg.c_str());
         if (httpCode == 400 && errorMsg.indexOf("already completed") >= 0) {
             sessionDepositCount = MAX_DEPOSITS_PER_SESSION;
-            Serial.println("[API] 🔒 Session already at maximum deposits (5/5).");
+            sessionCompleted = true;
+            lastCompletedSessionCode = activeSessionCode;
+            Serial.println("[API] 🔒 Session already at maximum deposits (5/5). Sensor deactivated.");
         }
         beepError();
     }
@@ -337,7 +343,8 @@ void handleStatus() {
     doc["ip"] = WiFi.localIP().toString();
     doc["deposits_this_session"] = sessionDepositCount;
     doc["max_deposits"] = MAX_DEPOSITS_PER_SESSION;
-    doc["session_completed"] = (hasActiveSession && sessionDepositCount >= MAX_DEPOSITS_PER_SESSION);
+    doc["session_completed"] = (sessionCompleted || sessionDepositCount >= MAX_DEPOSITS_PER_SESSION);
+    doc["sensor_active"] = (hasActiveSession && !sessionCompleted && sessionDepositCount < MAX_DEPOSITS_PER_SESSION);
     doc["last_weight"] = lastMeasuredWeight;
     doc["uptime_ms"] = millis();
 
@@ -360,9 +367,17 @@ void handlePostSession() {
         return;
     }
 
-    activeSessionCode = doc["session_code"].as<String>();
-    activeSessionCode.trim();
-    activeSessionCode.toUpperCase();
+    String newSession = doc["session_code"].as<String>();
+    newSession.trim();
+    newSession.toUpperCase();
+
+    // Reset lock if registering a new session
+    if (newSession != lastCompletedSessionCode) {
+        sessionCompleted = false;
+        lastCompletedSessionCode = "";
+    }
+
+    activeSessionCode = newSession;
     hasActiveSession = (activeSessionCode.length() > 0);
     sessionDepositCount = 0;
 
@@ -388,6 +403,8 @@ void handleDeleteSession() {
     activeSessionCode = "";
     hasActiveSession = false;
     sessionDepositCount = 0;
+    sessionCompleted = false;
+    lastCompletedSessionCode = "";
     Serial.println("[BRIDGE] Session cleared");
 
     server.send(200, "application/json", "{\"success\":true}");
@@ -497,7 +514,7 @@ void handleSimulateDeposit() {
         return;
     }
 
-    if (sessionDepositCount >= MAX_DEPOSITS_PER_SESSION) {
+    if (sessionCompleted || sessionDepositCount >= MAX_DEPOSITS_PER_SESSION) {
         server.send(400, "application/json", "{\"error\":\"Session already reached maximum deposits (5/5)\"}");
         return;
     }
@@ -562,6 +579,13 @@ void handleSensorDebug() {
 // ─── Sensor Polling ───────────────────────────────────────────────────────────
 
 bool isObjectDetected() {
+    // ── Enforced Directly in the Sensor ──
+    // If no active session or the session has finished 5/5 deposits,
+    // the sensor is fully disabled (zero ultrasonic pulses, zero pin reads).
+    if (!hasActiveSession || sessionCompleted || sessionDepositCount >= MAX_DEPOSITS_PER_SESSION) {
+        return false;
+    }
+
 #if SENSOR_MODE_IR
     return digitalRead(PROXIMITY_PIN) == LOW;
 #else
@@ -609,14 +633,15 @@ bool isObjectDetected() {
     }
 
     void checkDepositSensors() {
+        // ── Enforced Directly in the Sensor ──
+        // Halt immediately if there is no active session or if 5/5 deposits have been reached.
+        if (!hasActiveSession || sessionCompleted || sessionDepositCount >= MAX_DEPOSITS_PER_SESSION) {
+            return; // Sensor hardware completely inactive; zero work performed
+        }
+
         unsigned long now = millis();
         if (now - lastDepositTime < DEPOSIT_DEBOUNCE_MS) {
             return; // Debounce period
-        }
-
-        // Stop receiving deposit events once 5 deposits are completed for this session
-        if (hasActiveSession && sessionDepositCount >= MAX_DEPOSITS_PER_SESSION) {
-            return; // Target reached for this session; ignore further chute activity
         }
 
         if (isObjectDetected()) {
@@ -640,13 +665,15 @@ bool isObjectDetected() {
             }
 #endif
 
-            if (hasActiveSession) {
-                Serial.printf("[DEPOSIT] Valid deposit (%d/%d)! Forwarding to session: %s\n",
-                              sessionDepositCount + 1, MAX_DEPOSITS_PER_SESSION, activeSessionCode.c_str());
-                sendDepositToLaravel(activeSessionCode, weight);
-            } else {
-                Serial.println("[DEPOSIT] Item detected, but no active kiosk session registered.");
-                beepShort();
+            Serial.printf("[DEPOSIT] Valid deposit (%d/%d)! Forwarding to session: %s\n",
+                          sessionDepositCount + 1, MAX_DEPOSITS_PER_SESSION, activeSessionCode.c_str());
+            sendDepositToLaravel(activeSessionCode, weight);
+
+            if (sessionDepositCount >= MAX_DEPOSITS_PER_SESSION) {
+                sessionCompleted = true;
+                lastCompletedSessionCode = activeSessionCode;
+                Serial.printf("[SENSOR] 🔒 Session %s reached 5/5 deposits! Sensor hardware deactivated.\n",
+                              activeSessionCode.c_str());
             }
 
             digitalWrite(STATUS_LED_PIN, LOW);
@@ -693,17 +720,38 @@ void pollCloudActiveSession() {
                     activeSessionCode = cloudSessionCode;
                     hasActiveSession = true;
                     sessionDepositCount = deposits;
+                    sessionCompleted = (sessionDepositCount >= MAX_DEPOSITS_PER_SESSION);
+                    if (sessionCompleted) {
+                        lastCompletedSessionCode = cloudSessionCode;
+                    } else {
+                        lastCompletedSessionCode = "";
+                    }
                     Serial.printf("[CLOUD-SYNC] ★ Active session synced from Render: %s (deposits: %d/%d)\n",
                                   activeSessionCode.c_str(), sessionDepositCount, MAX_DEPOSITS_PER_SESSION);
                     beepShort();
                 } else {
                     sessionDepositCount = deposits;
+                    if (sessionDepositCount >= MAX_DEPOSITS_PER_SESSION) {
+                        sessionCompleted = true;
+                        lastCompletedSessionCode = activeSessionCode;
+                    }
                 }
             } else if (!isActive && hasActiveSession) {
-                Serial.println("[CLOUD-SYNC] Active session closed or completed on Render.");
-                activeSessionCode = "";
-                hasActiveSession = false;
-                sessionDepositCount = 0;
+                if (sessionCompleted || sessionDepositCount >= MAX_DEPOSITS_PER_SESSION) {
+                    // Session concluded successfully at 5/5: keep sensor locked!
+                    lastCompletedSessionCode = activeSessionCode;
+                    sessionCompleted = true;
+                    hasActiveSession = false;
+                    Serial.printf("[CLOUD-SYNC] 🔒 Session %s reached 5/5 deposits. Sensor remains locked until new session.\n",
+                                  lastCompletedSessionCode.c_str());
+                } else {
+                    Serial.println("[CLOUD-SYNC] Active session closed or completed on Render.");
+                    activeSessionCode = "";
+                    hasActiveSession = false;
+                    sessionDepositCount = 0;
+                    sessionCompleted = false;
+                    lastCompletedSessionCode = "";
+                }
             }
         }
     }
