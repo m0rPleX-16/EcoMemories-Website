@@ -23,6 +23,13 @@ class SessionController extends Controller
             'expires_at' => now()->addHours(2),
         ]);
 
+        // Cache active session code for sub-15ms device discovery
+        cache()->put('kiosk_active_session', [
+            'session_code' => $session->session_code,
+            'deposits' => 0,
+            'required' => RewardService::REQUIRED_DEPOSITS,
+        ], now()->addHours(2));
+
         $this->notifyBridgeSession($session->session_code);
 
         return response()->json([
@@ -42,8 +49,6 @@ class SessionController extends Controller
             ->with(['deposits', 'rewards', 'photoSessions.photo'])
             ->firstOrFail();
 
-        $this->notifyBridgeSession($session->session_code);
-
         return response()->json([
             'success' => true,
             'session' => $this->formatSession($session),
@@ -58,7 +63,22 @@ class SessionController extends Controller
         $cachedIp = cache()->get('esp32_bridge_ip');
         $bridgeUrl = $cachedIp
             ? (str_starts_with($cachedIp, 'http') ? $cachedIp : "http://{$cachedIp}:3333")
-            : env('VITE_BRIDGE_URL', 'http://192.168.1.8:3333');
+            : env('VITE_BRIDGE_URL');
+
+        if (!$bridgeUrl) {
+            return;
+        }
+
+        // Never hang attempting to reach private/internal LAN IPs from cloud environments (e.g. Render)
+        $host = parse_url($bridgeUrl, PHP_URL_HOST);
+        $isPrivate = in_array($host, ['localhost', '127.0.0.1'])
+            || str_starts_with($host ?? '', '192.168.')
+            || str_starts_with($host ?? '', '10.')
+            || str_starts_with($host ?? '', '172.');
+        if (app()->isProduction() && $isPrivate) {
+            return;
+        }
+
         $eventUrl = url('/api/devices/events');
 
         try {

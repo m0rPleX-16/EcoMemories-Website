@@ -59,7 +59,7 @@ String currentEventUrl = LARAVEL_EVENT_URL;
 
 void beepShort() {
     digitalWrite(BUZZER_PIN, HIGH);
-    delay(100);
+    delay(60);
     digitalWrite(BUZZER_PIN, LOW);
 }
 
@@ -574,12 +574,10 @@ void handleSensorDebug() {
     server.send(200, "application/json", resp);
 }
 
-// ─── Sensor Polling ───────────────────────────────────────────────────────────
-
 bool isObjectDetected() {
     // ── Enforced Directly in the Sensor ──
-    // If no active session or the session has finished 5/5 deposits,
-    // the sensor is fully disabled (zero ultrasonic pulses, zero pin reads).
+    // Strictly disable sensor if no active session, or if 5/5 deposits have completed.
+    // Zero ultrasonic pulses, zero pin reads, zero work performed.
     if (!hasActiveSession || sessionCompleted || sessionDepositCount >= MAX_DEPOSITS_PER_SESSION) {
         return false;
     }
@@ -587,35 +585,16 @@ bool isObjectDetected() {
 #if SENSOR_MODE_IR
     return digitalRead(PROXIMITY_PIN) == LOW;
 #else
-    // Remember the functional pin mapping to eliminate redundant double timeouts
-    static int trigPin = 14;
-    static int echoPin = 27;
+    // HC-SR04 Ultrasonic Trigger on Pin 14, Echo on Pin 27
+    digitalWrite(PROXIMITY_PIN, LOW);
+    delayMicroseconds(2);
+    digitalWrite(PROXIMITY_PIN, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(PROXIMITY_PIN, LOW);
 
-    pinMode(trigPin, OUTPUT);
-    pinMode(echoPin, INPUT);
-    digitalWrite(trigPin, LOW); delayMicroseconds(2);
-    digitalWrite(trigPin, HIGH); delayMicroseconds(10);
-    digitalWrite(trigPin, LOW);
-    long duration = pulseIn(echoPin, HIGH, 2000); // 2000us max = ~34cm
-
-    // If no echo on cached pins, test alternate mapping once
-    if (duration == 0) {
-        int altTrig = (trigPin == 14) ? 27 : 14;
-        int altEcho = (echoPin == 27) ? 14 : 27;
-        pinMode(altTrig, OUTPUT);
-        pinMode(altEcho, INPUT);
-        digitalWrite(altTrig, LOW); delayMicroseconds(2);
-        digitalWrite(altTrig, HIGH); delayMicroseconds(10);
-        digitalWrite(altTrig, LOW);
-        long altDuration = pulseIn(altEcho, HIGH, 2000);
-        if (altDuration > 0) {
-            trigPin = altTrig;
-            echoPin = altEcho;
-            duration = altDuration;
-        }
-    }
-
+    long duration = pulseIn(ULTRASONIC_ECHO_PIN, HIGH, 2500); // 2500us = ~42cm chute limit
     if (duration == 0) return false;
+
     float distanceCm = duration * 0.034f / 2.0f;
     if (distanceCm >= ULTRASONIC_MIN_DIST_CM && distanceCm <= ULTRASONIC_MAX_DIST_CM) {
         Serial.printf("[ULTRASONIC] Object detected at %.1f cm (duration: %ld us)\n", distanceCm, duration);
@@ -625,79 +604,71 @@ bool isObjectDetected() {
 #endif
 }
 
-    float readWeightGrams() {
-    #if ENABLE_WEIGHT_SENSOR
-        if (!hx711Ready) return 18.0f; // Return simulated weight if HX711 is not connected
+float readWeightGrams() {
+#if ENABLE_WEIGHT_SENSOR
+    if (!hx711Ready) return 18.0f; // Return simulated weight if HX711 is not connected
 
-        if (scale.is_ready()) {
-            float rawWeight = scale.get_units(5); // Average 5 readings
-            if (rawWeight < 0) rawWeight = 0;
-            return rawWeight;
-        }
-        return 0.0f;
-    #else
-        return 18.0f; // Simulated average recyclable bottle/can weight
-    #endif
+    if (scale.is_ready()) {
+        float rawWeight = scale.get_units(5); // Average 5 readings
+        if (rawWeight < 0) rawWeight = 0;
+        return rawWeight;
     }
+    return 0.0f;
+#else
+    return 18.0f; // Simulated average recyclable bottle/can weight
+#endif
+}
 
-    void checkDepositSensors() {
-        // ── Enforced Directly in the Sensor ──
-        // Halt immediately if there is no active session or if 5/5 deposits have been reached.
-        if (!hasActiveSession || sessionCompleted || sessionDepositCount >= MAX_DEPOSITS_PER_SESSION) {
-            return; // Sensor hardware completely inactive; zero work performed
-        }
+// Forward declaration of async queue
+void queueDeposit(const String& sessionCode, float weight);
 
-        unsigned long now = millis();
-        if (now - lastDepositTime < DEPOSIT_DEBOUNCE_MS) {
-            return; // Debounce period
-        }
-
-        if (isObjectDetected()) {
-            lastDepositTime = millis();
-            float weight = readWeightGrams();
-            lastMeasuredWeight = weight;
-
-            // ── 1. INSTANT LOCAL FEEDBACK (< 1ms) ──
-            // Beep and illuminate status LED immediately so the user experiences zero lag!
-            digitalWrite(STATUS_LED_PIN, HIGH);
-            beepShort();
-            sessionDepositCount++;
-
-            Serial.printf("[SENSOR] Instant deposit trigger (%d/%d)! Measured weight: %.1fg\n",
-                          sessionDepositCount, MAX_DEPOSITS_PER_SESSION, weight);
-
-            if (sessionDepositCount >= MAX_DEPOSITS_PER_SESSION) {
-                sessionCompleted = true;
-                lastCompletedSessionCode = activeSessionCode;
-                beepRewardUnlocked();
-                Serial.printf("[SENSOR] 🔒 Session %s reached 5/5 deposits! Celebratory chime played.\n",
-                              activeSessionCode.c_str());
-            }
-
-            // ── 2. Sync to Laravel Backend ──
-            sendDepositToLaravel(activeSessionCode, weight);
-
-            digitalWrite(STATUS_LED_PIN, LOW);
-        }
-    }
-
-// ─── Cloud Active Session Auto-Sync (Render.com) ─────────────────────────────
-
-unsigned long lastCloudPollTime = 0;
-
-void pollCloudActiveSession() {
-    if (WiFi.status() != WL_CONNECTED) return;
-
-    // ── PERFORMANCE BOOST ──
-    // During an active session in progress, DO NOT do blocking HTTPS polling!
-    // A TLS handshake blocks loop() for 1.5s, freezing the sensor.
-    if (hasActiveSession && !sessionCompleted) {
+void checkDepositSensors() {
+    // ── Enforced Directly in the Sensor ──
+    // Sensor hardware completely inactive; zero work performed if no active session or already completed
+    if (!hasActiveSession || sessionCompleted || sessionDepositCount >= MAX_DEPOSITS_PER_SESSION) {
         return;
     }
 
-    // When idle (waiting for a user session), poll every 4 seconds
-    if (millis() - lastCloudPollTime < 4000) return;
-    lastCloudPollTime = millis();
+    unsigned long now = millis();
+    if (now - lastDepositTime < DEPOSIT_DEBOUNCE_MS) {
+        return; // Debounce period
+    }
+
+    if (isObjectDetected()) {
+        lastDepositTime = millis();
+        float weight = readWeightGrams();
+        lastMeasuredWeight = weight;
+
+        // ── 1. INSTANT LOCAL FEEDBACK (< 1ms) ──
+        digitalWrite(STATUS_LED_PIN, HIGH);
+        beepShort();
+        sessionDepositCount++;
+
+        // Instant USB Serial output for Node bridge or serial monitor
+        Serial.printf("DEPOSIT:%.1f\n", weight);
+        Serial.printf("[SENSOR] Instant deposit trigger (%d/%d)! Measured weight: %.1fg\n",
+                      sessionDepositCount, MAX_DEPOSITS_PER_SESSION, weight);
+
+        if (sessionDepositCount >= MAX_DEPOSITS_PER_SESSION) {
+            sessionCompleted = true;
+            hasActiveSession = false; // Strictly de-activate session in the sensor!
+            lastCompletedSessionCode = activeSessionCode;
+            beepRewardUnlocked();
+            Serial.printf("[SENSOR] 🔒 Session %s reached 5/5 deposits! Sensor permanently locked.\n",
+                          lastCompletedSessionCode.c_str());
+        }
+
+        // ── 2. Decoupled Async Cloud Forwarding (Zero Sensor Freezing!) ──
+        queueDeposit(activeSessionCode, weight);
+
+        digitalWrite(STATUS_LED_PIN, LOW);
+    }
+}
+
+// ─── Cloud Active Session Auto-Sync (Render.com) ─────────────────────────────
+
+bool syncActiveSessionFromCloud() {
+    if (WiFi.status() != WL_CONNECTED) return false;
 
     String activeSessionUrl = currentEventUrl;
     activeSessionUrl.replace("/events", "/active-session");
@@ -716,6 +687,7 @@ void pollCloudActiveSession() {
     http.setReuse(true);
     http.setTimeout(2000);
     int httpCode = http.GET();
+    bool foundActive = false;
 
     if (httpCode == 200) {
         String payload = http.getString();
@@ -727,29 +699,27 @@ void pollCloudActiveSession() {
             int deposits = doc["deposits"] | 0;
 
             if (isActive && cloudSessionCode.length() > 0) {
+                foundActive = true;
                 if (!hasActiveSession || activeSessionCode != cloudSessionCode) {
-                    activeSessionCode = cloudSessionCode;
-                    hasActiveSession = true;
-                    sessionDepositCount = deposits;
-                    sessionCompleted = (sessionDepositCount >= MAX_DEPOSITS_PER_SESSION);
-                    if (sessionCompleted) {
-                        lastCompletedSessionCode = cloudSessionCode;
-                    } else {
-                        lastCompletedSessionCode = "";
+                    if (cloudSessionCode != lastCompletedSessionCode) {
+                        activeSessionCode = cloudSessionCode;
+                        hasActiveSession = true;
+                        sessionDepositCount = deposits;
+                        sessionCompleted = (sessionDepositCount >= MAX_DEPOSITS_PER_SESSION);
+                        Serial.printf("[CLOUD-SYNC] ★ Active session synced from Render: %s (deposits: %d/%d)\n",
+                                      activeSessionCode.c_str(), sessionDepositCount, MAX_DEPOSITS_PER_SESSION);
+                        beepShort();
                     }
-                    Serial.printf("[CLOUD-SYNC] ★ Active session synced from Render: %s (deposits: %d/%d)\n",
-                                  activeSessionCode.c_str(), sessionDepositCount, MAX_DEPOSITS_PER_SESSION);
-                    beepShort();
                 } else {
                     sessionDepositCount = deposits;
                     if (sessionDepositCount >= MAX_DEPOSITS_PER_SESSION) {
                         sessionCompleted = true;
+                        hasActiveSession = false;
                         lastCompletedSessionCode = activeSessionCode;
                     }
                 }
             } else if (!isActive && hasActiveSession) {
                 if (sessionCompleted || sessionDepositCount >= MAX_DEPOSITS_PER_SESSION) {
-                    // Session concluded successfully at 5/5: keep sensor locked!
                     lastCompletedSessionCode = activeSessionCode;
                     sessionCompleted = true;
                     hasActiveSession = false;
@@ -767,6 +737,49 @@ void pollCloudActiveSession() {
         }
     }
     http.end();
+    return foundActive;
+}
+
+// ─── FreeRTOS Async Deposit Queue (Zero-Latency Sensor Decoupling) ────────────
+
+struct DepositQueueItem {
+    char sessionCode[16];
+    float weight;
+};
+
+QueueHandle_t depositQueue = NULL;
+
+void queueDeposit(const String& sessionCode, float weight) {
+    if (depositQueue == NULL) {
+        sendDepositToLaravel(sessionCode, weight);
+        return;
+    }
+    DepositQueueItem item;
+    memset(&item, 0, sizeof(item));
+    strncpy(item.sessionCode, sessionCode.c_str(), sizeof(item.sessionCode) - 1);
+    item.weight = weight;
+    if (xQueueSend(depositQueue, &item, 0) != pdPASS) {
+        Serial.println("[QUEUE] ⚠ Deposit queue full, sending synchronously");
+        sendDepositToLaravel(sessionCode, weight);
+    }
+}
+
+void cloudWorkerTask(void* pvParameters) {
+    while (true) {
+        DepositQueueItem item;
+        // Wait up to 1200ms for a queued deposit event from the sensor
+        if (xQueueReceive(depositQueue, &item, pdMS_TO_TICKS(1200)) == pdPASS) {
+            Serial.printf("[BG-WORKER] ▶ Sending deposit to Laravel for session %s (%.1fg)...\n",
+                          item.sessionCode, item.weight);
+            sendDepositToLaravel(String(item.sessionCode), item.weight);
+        } else {
+            // Idle background poll: sync active session from Render without freezing sensor
+            if (!hasActiveSession || sessionCompleted) {
+                syncActiveSessionFromCloud();
+            }
+        }
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
 }
 
 // ─── Setup & Loop ─────────────────────────────────────────────────────────────
@@ -789,6 +802,7 @@ void setup() {
     pinMode(PROXIMITY_PIN, INPUT_PULLUP);
 #else
     pinMode(PROXIMITY_PIN, OUTPUT);
+    digitalWrite(PROXIMITY_PIN, LOW);
     pinMode(ULTRASONIC_ECHO_PIN, INPUT);
 #endif
 
@@ -854,6 +868,18 @@ void setup() {
         Serial.println("\n[WIFI] ! Failed to connect to Wi-Fi. Retrying in background...");
     }
 
+    // Start FreeRTOS Cloud Worker on Core 0
+    depositQueue = xQueueCreate(8, sizeof(DepositQueueItem));
+    xTaskCreatePinnedToCore(
+        cloudWorkerTask,
+        "CloudWorker",
+        8192,
+        NULL,
+        1,
+        NULL,
+        0 // Pin to Core 0
+    );
+
     // Setup Local WebServer Routes
     server.on("/status", HTTP_GET, handleStatus);
     server.on("/session", HTTP_POST, handlePostSession);
@@ -890,12 +916,9 @@ void loop() {
     // 2. Handle incoming HTTP requests from the React Kiosk
     server.handleClient();
 
-    // 3. Snappy sensor polling (40 times per second for instant hand/item detection)
+    // 3. Snappy sensor polling on Core 1 (40 times per second with zero network latency)
     if (millis() - lastSensorCheckTime > 25) {
         lastSensorCheckTime = millis();
         checkDepositSensors();
     }
-
-    // 4. Automatic Cloud Session Sync from Render (checks every 2 seconds)
-    pollCloudActiveSession();
 }

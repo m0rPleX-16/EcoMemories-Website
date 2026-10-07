@@ -7,8 +7,8 @@ use App\Http\Controllers\Api\PhotoSessionController;
 use App\Http\Controllers\Api\PhotoController;
 use Illuminate\Support\Facades\Route;
 
-// Rate-limited API routes for compliance, anti-scraping & integrity protection
-Route::middleware('throttle:60,1')->group(function () {
+// High-throughput rate limit (300 req/min) for real-time kiosk hardware & UI polling
+Route::middleware('throttle:300,1')->group(function () {
     // Sessions
     Route::post('/sessions', [SessionController::class, 'store']);
     Route::get('/sessions/{sessionCode}', [SessionController::class, 'show']);
@@ -25,20 +25,37 @@ Route::middleware('throttle:60,1')->group(function () {
         return response()->json(['success' => true, 'registered_ip' => $ip]);
     });
     Route::get('/devices/active-session', function () {
+        $cached = cache()->get('kiosk_active_session');
+        if (is_array($cached) && !empty($cached['session_code']) && ($cached['deposits'] ?? 0) < 5) {
+            return response()->json([
+                'active' => true,
+                'session_code' => $cached['session_code'],
+                'deposits' => $cached['deposits'],
+                'required' => 5,
+            ]);
+        }
+
         $session = \App\Models\Session::where('status', \App\Models\Session::STATUS_ACTIVE)
             ->where('expires_at', '>', now())
             ->latest()
             ->first();
 
         if ($session && $session->validDepositsCount() < 5) {
-            return response()->json([
-                'active' => true,
+            $data = [
                 'session_code' => $session->session_code,
                 'deposits' => $session->validDepositsCount(),
+                'required' => 5,
+            ];
+            cache()->put('kiosk_active_session', $data, now()->addMinutes(10));
+            return response()->json([
+                'active' => true,
+                'session_code' => $data['session_code'],
+                'deposits' => $data['deposits'],
                 'required' => 5,
             ]);
         }
 
+        cache()->forget('kiosk_active_session');
         return response()->json([
             'active' => false,
             'session_code' => '',

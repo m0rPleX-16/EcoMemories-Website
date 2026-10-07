@@ -111,6 +111,17 @@ class DeviceEventController extends Controller
         // 7. Run reward logic
         $reward = $rewardService->evaluateDeposits($session);
 
+        $validCount = $session->validDepositsCount();
+        if ($validCount < RewardService::REQUIRED_DEPOSITS) {
+            cache()->put('kiosk_active_session', [
+                'session_code' => $session->session_code,
+                'deposits' => $validCount,
+                'required' => RewardService::REQUIRED_DEPOSITS,
+            ], now()->addHours(2));
+        } else {
+            cache()->forget('kiosk_active_session');
+        }
+
         // 8. Return updated state
         return response()->json([
             'success' => true,
@@ -120,7 +131,7 @@ class DeviceEventController extends Controller
             ],
             'reward_earned' => $reward !== null,
             'session' => [
-                'deposits' => $session->validDepositsCount(),
+                'deposits' => $validCount,
                 'required' => RewardService::REQUIRED_DEPOSITS,
                 'credits' => $session->availableCredits(),
             ],
