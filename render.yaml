@@ -7,16 +7,18 @@ services:
     runtime: docker
     plan: free
     dockerfilePath: ./Dockerfile
-    healthCheckPath: /
+    healthCheckPath: /healthz
     envVars:
       - key: APP_NAME
         value: EcoMemories
       - key: APP_ENV
         value: production
       - key: APP_DEBUG
-        value: "false"
+        value: "true"
       - key: APP_KEY
-        generateValue: true
+        value: base64:nAeHeuHEuJsP1gmw4jgCfrBbgHSjDAN7LhAa2urZXOM=
+      - key: LOG_CHANNEL
+        value: stderr
       - key: DB_CONNECTION
         value: pgsql
       - key: DATABASE_URL
@@ -28,9 +30,9 @@ services:
           name: ecomemories-db
           property: connectionString
       - key: SESSION_DRIVER
-        value: database
+        value: file
       - key: CACHE_STORE
-        value: database
+        value: file
 
 databases:
   - name: ecomemories-db
