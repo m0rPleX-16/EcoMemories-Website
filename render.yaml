@@ -1,0 +1,53 @@
+# ==============================================================================
+#  Render Blueprint: EcoMemories Smart Kiosk Web Service & PostgreSQL Database
+# ==============================================================================
+services:
+  - type: web
+    name: ecomemories-web
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    envVars:
+      - key: APP_NAME
+        value: EcoMemories
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_KEY
+        generateValue: true
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_HOST
+        fromDatabase:
+          name: ecomemories-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: ecomemories-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: ecomemories-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: ecomemories-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: ecomemories-db
+          property: password
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_STORE
+        value: database
+
+databases:
+  - name: ecomemories-db
+    databaseName: ecophotobooth_website
+    user: postgres
+    plan: free
+    region: singapore
