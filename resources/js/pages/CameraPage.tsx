@@ -54,21 +54,6 @@ const POSE_PROMPTS = [
     { title: 'Pose 4 of 4', subtitle: 'Peace & Love for Earth', icon: Heart },
 ];
 
-const THEME_ICONS: Record<StripTheme, React.ComponentType<{ className?: string }>> = {
-    emerald: Leaf,
-    kraft: FileText,
-    midnight: Moon,
-    minimalist: Sun,
-    sakura: Heart,
-    retro: Film,
-    lavender: Wand2,
-    terracotta: Palette,
-    cyberpunk: Sparkles,
-    ocean: Waves,
-    sunflower: Sun,
-    matcha: Leaf,
-};
-
 type BoothState =
     | 'requesting'
     | 'ready'
@@ -78,6 +63,8 @@ type BoothState =
     | 'review'
     | 'uploading'
     | 'error';
+
+type StudioTab = 'filter' | 'frame' | 'caption' | 'stamps' | 'poses';
 
 export default function CameraPage() {
     const { sessionCode } = useParams<{ sessionCode: string }>();
@@ -112,7 +99,8 @@ export default function CameraPage() {
     const [selectedSticker, setSelectedSticker] = useState<EcoSticker>('none');
     const [filterCategory, setFilterCategory] = useState<'All' | 'Essential' | 'Vintage' | 'Monochrome' | 'Aesthetic'>('All');
 
-    // Mobile specific tab for review step ('customize' vs 'preview')
+    // Studio active tab
+    const [activeStudioTab, setActiveStudioTab] = useState<StudioTab>('filter');
     const [mobileStudioTab, setMobileStudioTab] = useState<'customize' | 'preview'>('customize');
 
     const [compositePreview, setCompositePreview] = useState<string | null>(null);
@@ -374,6 +362,15 @@ export default function CameraPage() {
         ? PHOTO_FILTERS
         : PHOTO_FILTERS.filter((f) => f.category === filterCategory);
 
+    // Studio tabs definition
+    const STUDIO_TABS = [
+        { id: 'filter' as StudioTab, label: 'Filter', icon: Wand2, badge: PHOTO_FILTERS.find((f) => f.id === selectedFilter)?.name },
+        { id: 'frame' as StudioTab, label: 'Theme & Style', icon: Palette, badge: THEMES[selectedTheme].name },
+        { id: 'caption' as StudioTab, label: 'Dedication', icon: Type, badge: customCaption ? 'Custom' : 'Default' },
+        { id: 'stamps' as StudioTab, label: 'Eco Stamps', icon: Tag, badge: selectedSticker !== 'none' ? STICKER_CONFIG[selectedSticker].label : 'None' },
+        { id: 'poses' as StudioTab, label: 'Poses', icon: Camera, badge: `${capturedShots.length}/4` },
+    ];
+
     return (
         <main className="flex-1 flex flex-col items-center justify-center px-3 sm:px-6 py-3 sm:py-6 max-w-6xl mx-auto w-full">
             <canvas ref={canvasRef} className="hidden" />
@@ -382,7 +379,7 @@ export default function CameraPage() {
             {flashActive && <div className="fixed inset-0 bg-white z-50 animate-fade-out pointer-events-none" />}
 
             {/* TOP BAR / NAVIGATION */}
-            <div className="w-full flex items-center justify-between mb-3 sm:mb-5 flex-wrap gap-2">
+            <div className="w-full flex items-center justify-between mb-3 sm:mb-4 flex-wrap gap-2">
                 <button
                     onClick={() => navigate(`/session/${sessionCode}`)}
                     className="btn-secondary text-xs sm:text-sm px-3 py-1.5 sm:px-3.5 sm:py-2 inline-flex items-center gap-1.5"
@@ -424,7 +421,7 @@ export default function CameraPage() {
             {boothState !== 'review' && boothState !== 'uploading' && boothState !== 'error' && (
                 <div className="w-full max-w-3xl flex flex-col items-center animate-fade-in-up">
                     {/* Pose Guidance Banner */}
-                    <div className="w-full editorial-card px-3.5 sm:px-4 py-2.5 sm:py-3.5 mb-3 flex items-center justify-between border-b-2 border-[#C5A059]">
+                    <div className="w-full editorial-card px-3.5 sm:px-4 py-2.5 sm:py-3 mb-3 flex items-center justify-between border-b-2 border-[#C5A059]">
                         <div className="flex items-center gap-2.5 sm:gap-3">
                             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-[#0E3E2B] text-[#D4AF37] flex items-center justify-center flex-shrink-0">
                                 <CurrentPoseIcon className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -439,7 +436,7 @@ export default function CameraPage() {
                             </div>
                         </div>
                         <div className="text-right">
-                            <span className="font-mono text-xs sm:text-sm font-bold text-[#0E3E2B]">
+                            <span className="font-mono text-xs sm:text-sm font-bold text-[#0E3E2B] bg-[#F4EFE6] px-2 py-0.5 rounded-md">
                                 {currentShotIndex + 1}/4
                             </span>
                         </div>
@@ -447,7 +444,7 @@ export default function CameraPage() {
 
                     {/* Camera Feed Container */}
                     <div className="w-full flex flex-col md:flex-row items-center gap-3">
-                        <div className="relative w-full aspect-[4/3] max-h-[42vh] sm:max-h-[480px] rounded-2xl overflow-hidden bg-black shadow-lg border-2 border-[#0E3E2B] flex items-center justify-center">
+                        <div className="relative w-full aspect-[4/3] max-h-[42vh] sm:max-h-[460px] rounded-2xl overflow-hidden bg-black shadow-lg border-2 border-[#0E3E2B] flex items-center justify-center">
                             <video
                                 ref={videoRef}
                                 autoPlay
@@ -494,13 +491,13 @@ export default function CameraPage() {
                                 </div>
                             )}
 
-                            {/* Framing Corner Accents */}
+                            {/* Framing Guidelines */}
                             <div className="absolute top-3 left-3 w-4 sm:w-5 h-4 sm:h-5 border-t-2 border-l-2 border-[#D4AF37]/70" />
                             <div className="absolute bottom-3 left-3 w-4 sm:w-5 h-4 sm:h-5 border-b-2 border-l-2 border-[#D4AF37]/70" />
                             <div className="absolute bottom-3 right-3 w-4 sm:w-5 h-4 sm:h-5 border-b-2 border-r-2 border-[#D4AF37]/70" />
                         </div>
 
-                        {/* 4-Shot Progress Strip (Horizontal on Mobile, Vertical on Tablet/Desktop) */}
+                        {/* 4-Shot Progress Strip */}
                         <div className="flex md:flex-col gap-2 justify-center w-full md:w-auto overflow-x-auto py-1 flex-shrink-0">
                             {[0, 1, 2, 3].map((idx) => {
                                 const shot = capturedShots[idx];
@@ -509,7 +506,7 @@ export default function CameraPage() {
                                 return (
                                     <div
                                         key={idx}
-                                        className={`w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-xl overflow-hidden border-2 flex items-center justify-center transition-all bg-white flex-shrink-0 ${
+                                        className={`w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-xl overflow-hidden border-2 flex items-center justify-center transition-all bg-white flex-shrink-0 relative ${
                                             shot
                                                 ? 'border-[#0E3E2B] shadow-xs'
                                                 : isCurrent
@@ -518,12 +515,17 @@ export default function CameraPage() {
                                         }`}
                                     >
                                         {shot ? (
-                                            <img
-                                                src={shot}
-                                                alt={`Pose ${idx + 1}`}
-                                                className="w-full h-full object-cover"
-                                                style={{ filter: currentFilterCss }}
-                                            />
+                                            <>
+                                                <img
+                                                    src={shot}
+                                                    alt={`Pose ${idx + 1}`}
+                                                    className="w-full h-full object-cover"
+                                                    style={{ filter: currentFilterCss }}
+                                                />
+                                                <div className="absolute top-1 right-1 bg-[#0E3E2B] text-[#D4AF37] rounded-full p-0.5">
+                                                    <Check className="w-2.5 h-2.5" />
+                                                </div>
+                                            </>
                                         ) : (
                                             <div className="text-center">
                                                 <span className="text-[11px] sm:text-xs font-mono font-bold text-[#83948C]">
@@ -537,9 +539,9 @@ export default function CameraPage() {
                         </div>
                     </div>
 
-                    {/* Pre-Shot Live Filter Bar with Category Tabs */}
+                    {/* Pre-Shot Live Filter Chips Carousel */}
                     {boothState === 'ready' && (
-                        <div className="w-full mt-3 sm:mt-4">
+                        <div className="w-full mt-3">
                             <div className="flex items-center justify-between mb-1.5 px-1">
                                 <div className="flex items-center gap-1.5">
                                     <Wand2 className="w-3.5 h-3.5 text-[#C5A059]" />
@@ -548,12 +550,11 @@ export default function CameraPage() {
                                     </span>
                                 </div>
                                 <span className="text-[10px] font-mono text-[#83948C]">
-                                    {PHOTO_FILTERS.length} curated filters
+                                    {PHOTO_FILTERS.length} styles
                                 </span>
                             </div>
 
-                            {/* Filter Chips Scrollable Carousel */}
-                            <div className="flex gap-1.5 overflow-x-auto pb-1.5 no-scrollbar w-full">
+                            <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar w-full">
                                 {PHOTO_FILTERS.map((f) => (
                                     <button
                                         key={f.id}
@@ -581,7 +582,7 @@ export default function CameraPage() {
                             <button
                                 id="start-booth-btn"
                                 onClick={startBoothSequence}
-                                className="btn-primary text-sm sm:text-base px-6 sm:px-9 py-3.5 w-full sm:w-auto shadow-md"
+                                className="btn-primary text-sm sm:text-base px-7 sm:px-10 py-3.5 w-full sm:w-auto shadow-md"
                             >
                                 <Camera className="w-4 h-4 text-[#D4AF37]" />
                                 <span>Start 4-Photo Sequence</span>
@@ -591,7 +592,7 @@ export default function CameraPage() {
                                 onClick={useTestMode}
                                 className="text-xs font-mono text-[#52635C] hover:text-[#0E3E2B] underline uppercase tracking-wider py-1"
                             >
-                                Or generate sample keepsake strip
+                                Or generate sample demo strip
                             </button>
                         </div>
                     )}
@@ -602,20 +603,17 @@ export default function CameraPage() {
             {(boothState === 'review' || boothState === 'uploading') && (
                 <div className="w-full max-w-5xl flex flex-col items-center animate-fade-in-up pb-20 sm:pb-6">
                     {/* Header */}
-                    <div className="text-center mb-4 sm:mb-6 px-2">
-                        <span className="pill-mono mb-1.5 text-[10px] sm:text-xs">
+                    <div className="text-center mb-3 sm:mb-5 px-2">
+                        <span className="pill-mono mb-1 text-[10px] sm:text-xs">
                             03 CUSTOMIZE PHOTOSTRIP
                         </span>
-                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-serif-editorial text-[#0E3E2B]">
-                            Personalize your{' '}
-                            <span className="highlight-gold">
-                                keepsake souvenir.
-                            </span>
+                        <h2 className="text-2xl sm:text-3xl font-serif-editorial text-[#0E3E2B]">
+                            Personalize your keepsake souvenir
                         </h2>
                     </div>
 
                     {/* MOBILE SEGMENT SELECTOR (Customize vs Preview) */}
-                    <div className="lg:hidden flex items-center p-1 bg-[#F0EDE6] rounded-xl mb-4 w-full max-w-md text-xs font-mono">
+                    <div className="lg:hidden flex items-center p-1 bg-[#F0EDE6] rounded-xl mb-3 w-full max-w-md text-xs font-mono">
                         <button
                             onClick={() => setMobileStudioTab('customize')}
                             className={`flex-1 py-2 rounded-lg transition-all font-bold flex items-center justify-center gap-1.5 ${
@@ -640,8 +638,9 @@ export default function CameraPage() {
                         </button>
                     </div>
 
-                    <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-8 items-start">
-                        {/* LEFT: Photostrip Canvas Live Preview */}
+                    {/* MAIN STUDIO GRID */}
+                    <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-7 items-start">
+                        {/* LEFT: Photostrip Live Preview */}
                         <div
                             className={`lg:col-span-5 flex justify-center sticky top-4 ${
                                 mobileStudioTab === 'customize' ? 'hidden lg:flex' : 'flex'
@@ -660,16 +659,16 @@ export default function CameraPage() {
                                         <img
                                             src={compositePreview}
                                             alt="Generated Photostrip"
-                                            className="rounded-xl border border-[#E8E3D5] max-h-[440px] sm:max-h-[580px] w-auto object-contain shadow-md"
+                                            className="rounded-xl border border-[#E8E3D5] max-h-[440px] sm:max-h-[540px] w-auto object-contain shadow-md"
                                         />
                                         <div className="flex items-center justify-between w-full mt-2.5 px-1 text-[10px] font-mono text-[#83948C]">
-                                            <span>THEME: {THEMES[selectedTheme].name.toUpperCase()}</span>
+                                            <span className="uppercase">THEME: {THEMES[selectedTheme].name}</span>
                                             <span className="uppercase">{selectedLayout === 'strip' ? '2x6 STRIP' : '2x2 GRID'}</span>
                                         </div>
                                     </div>
                                 ) : null}
 
-                                {/* Mobile button to jump back to editing */}
+                                {/* Mobile button to return to editing */}
                                 <div className="lg:hidden mt-3 w-full">
                                     <button
                                         onClick={() => setMobileStudioTab('customize')}
@@ -682,360 +681,388 @@ export default function CameraPage() {
                             </div>
                         </div>
 
-                        {/* RIGHT: Customizer Studio Controls */}
+                        {/* RIGHT: TABBED STUDIO DECK */}
                         <div
-                            className={`lg:col-span-7 space-y-4 sm:space-y-4.5 ${
-                                mobileStudioTab === 'preview' ? 'hidden lg:block' : 'block'
+                            className={`lg:col-span-7 flex flex-col gap-3 ${
+                                mobileStudioTab === 'preview' ? 'hidden lg:flex' : 'flex'
                             }`}
                         >
-                            {/* 1. PHOTO COLOR FILTERS (16 Choices with category filter) */}
-                            <div className="editorial-card p-4 sm:p-5">
-                                <div className="flex items-center justify-between mb-2.5">
-                                    <div className="flex items-center gap-2">
-                                        <Wand2 className="w-4 h-4 text-[#C5A059]" />
-                                        <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-[#0E3E2B]">
-                                            1. PHOTO COLOR FILTER
-                                        </h4>
-                                    </div>
-                                    <span className="text-[11px] font-mono text-[#8C6D1F] font-bold">
-                                        {PHOTO_FILTERS.find((f) => f.id === selectedFilter)?.name}
-                                    </span>
-                                </div>
-
-                                {/* Category Switcher */}
-                                <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1 no-scrollbar text-[11px] font-mono">
-                                    {(['All', 'Essential', 'Vintage', 'Monochrome', 'Aesthetic'] as const).map((cat) => (
+                            {/* Interactive Section Deck / Tab Pills */}
+                            <div className="flex items-center gap-1.5 p-1 bg-[#FAF8F5] rounded-2xl border border-[#E8E3D5] overflow-x-auto no-scrollbar">
+                                {STUDIO_TABS.map((tab) => {
+                                    const IconComp = tab.icon;
+                                    const isActive = activeStudioTab === tab.id;
+                                    return (
                                         <button
-                                            key={cat}
-                                            onClick={() => setFilterCategory(cat)}
-                                            className={`px-2.5 py-1 rounded-lg transition-all ${
-                                                filterCategory === cat
-                                                    ? 'bg-[#0E3E2B] text-white font-semibold'
-                                                    : 'bg-[#F4EFE6] text-[#52635C] hover:text-[#0E3E2B]'
+                                            key={tab.id}
+                                            onClick={() => setActiveStudioTab(tab.id)}
+                                            className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-mono font-bold transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                                                isActive
+                                                    ? 'bg-[#0E3E2B] text-white shadow-xs'
+                                                    : 'text-[#52635C] hover:text-[#0E3E2B] hover:bg-white'
                                             }`}
                                         >
-                                            {cat}
+                                            <IconComp className={`w-3.5 h-3.5 ${isActive ? 'text-[#D4AF37]' : 'text-[#83948C]'}`} />
+                                            <span>{tab.label}</span>
                                         </button>
-                                    ))}
-                                </div>
-
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                    {visibleFilters.map((f) => (
-                                        <button
-                                            key={f.id}
-                                            onClick={() => setSelectedFilter(f.id)}
-                                            className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between ${
-                                                selectedFilter === f.id
-                                                    ? 'border-[#0E3E2B] bg-[#F4EFE6] shadow-xs'
-                                                    : 'border-[#E8E3D5] bg-white hover:border-[#C5A059]'
-                                            }`}
-                                        >
-                                            <div className="flex items-center gap-1.5 mb-1">
-                                                <span
-                                                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                                                    style={{ backgroundColor: f.previewColor }}
-                                                />
-                                                <span className="text-xs font-semibold text-[#0E3E2B] truncate">
-                                                    {f.name}
-                                                </span>
-                                            </div>
-                                            <span className="text-[10px] text-[#52635C] line-clamp-1">
-                                                {f.description}
-                                            </span>
-                                        </button>
-                                    ))}
-                                </div>
+                                    );
+                                })}
                             </div>
 
-                            {/* 2. FRAME THEME (12 Themes) */}
-                            <div className="editorial-card p-4 sm:p-5">
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="flex items-center gap-2">
-                                        <Sparkles className="w-4 h-4 text-[#C5A059]" />
-                                        <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-[#0E3E2B]">
-                                            2. FRAME THEME
-                                        </h4>
+                            {/* TAB 1: PHOTO COLOR FILTERS */}
+                            {activeStudioTab === 'filter' && (
+                                <div className="editorial-card p-4 sm:p-5 animate-fade-in">
+                                    <div className="flex items-center justify-between mb-2.5">
+                                        <div className="flex items-center gap-2">
+                                            <Wand2 className="w-4 h-4 text-[#C5A059]" />
+                                            <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-[#0E3E2B]">
+                                                PHOTO COLOR FILTER
+                                            </h4>
+                                        </div>
+                                        <span className="text-[11px] font-mono text-[#8C6D1F] font-bold">
+                                            {PHOTO_FILTERS.find((f) => f.id === selectedFilter)?.name}
+                                        </span>
                                     </div>
-                                    <span className="text-[11px] font-mono text-[#8C6D1F] font-bold">
-                                        {THEMES[selectedTheme].name}
-                                    </span>
-                                </div>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                    {(Object.keys(THEMES) as StripTheme[]).map((thm) => {
-                                        const themeCfg = THEMES[thm];
-                                        const isSelected = selectedTheme === thm;
 
-                                        return (
+                                    {/* Category Filter Pills */}
+                                    <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1 no-scrollbar text-[11px] font-mono">
+                                        {(['All', 'Essential', 'Vintage', 'Monochrome', 'Aesthetic'] as const).map((cat) => (
                                             <button
-                                                key={thm}
-                                                onClick={() => setSelectedTheme(thm)}
-                                                className={`p-2.5 rounded-xl border text-left transition-all flex items-center gap-2 ${
-                                                    isSelected
+                                                key={cat}
+                                                onClick={() => setFilterCategory(cat)}
+                                                className={`px-2.5 py-1 rounded-lg transition-all ${
+                                                    filterCategory === cat
+                                                        ? 'bg-[#0E3E2B] text-white font-semibold'
+                                                        : 'bg-[#F4EFE6] text-[#52635C] hover:text-[#0E3E2B]'
+                                                }`}
+                                            >
+                                                {cat}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {/* Filters Grid */}
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                        {visibleFilters.map((f) => (
+                                            <button
+                                                key={f.id}
+                                                onClick={() => setSelectedFilter(f.id)}
+                                                className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                                                    selectedFilter === f.id
                                                         ? 'border-[#0E3E2B] bg-[#F4EFE6] shadow-xs'
                                                         : 'border-[#E8E3D5] bg-white hover:border-[#C5A059]'
                                                 }`}
                                             >
-                                                <div
-                                                    className="w-4 h-4 rounded-full border border-black/15 flex-shrink-0"
-                                                    style={{ backgroundColor: themeCfg.bg }}
-                                                />
-                                                <div className="truncate">
-                                                    <span className="text-xs font-semibold text-[#0E3E2B] block truncate">
-                                                        {themeCfg.name}
+                                                <div className="flex items-center gap-1.5 mb-1">
+                                                    <span
+                                                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                                                        style={{ backgroundColor: f.previewColor }}
+                                                    />
+                                                    <span className="text-xs font-semibold text-[#0E3E2B] truncate">
+                                                        {f.name}
                                                     </span>
                                                 </div>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* 3. LAYOUT SELECTION */}
-                            <div className="editorial-card p-4 sm:p-5">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <Layers className="w-4 h-4 text-[#C5A059]" />
-                                    <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-[#0E3E2B]">
-                                        3. LAYOUT STYLE
-                                    </h4>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
-                                    <button
-                                        onClick={() => setSelectedLayout('strip')}
-                                        className={`p-3 rounded-xl border text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all ${
-                                            selectedLayout === 'strip'
-                                                ? 'border-[#0E3E2B] bg-[#F4EFE6] text-[#0E3E2B] shadow-xs'
-                                                : 'border-[#E8E3D5] bg-white text-[#52635C] hover:border-[#D1C9B6]'
-                                        }`}
-                                    >
-                                        <Columns3 className="w-4 h-4 text-[#C5A059] flex-shrink-0" />
-                                        <span>Classic 2x6 Strip</span>
-                                    </button>
-                                    <button
-                                        onClick={() => setSelectedLayout('grid')}
-                                        className={`p-3 rounded-xl border text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all ${
-                                            selectedLayout === 'grid'
-                                                ? 'border-[#0E3E2B] bg-[#F4EFE6] text-[#0E3E2B] shadow-xs'
-                                                : 'border-[#E8E3D5] bg-white text-[#52635C] hover:border-[#D1C9B6]'
-                                        }`}
-                                    >
-                                        <LayoutGrid className="w-4 h-4 text-[#C5A059] flex-shrink-0" />
-                                        <span>2x2 Grid Card</span>
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* 4. PERSONALIZED DEDICATION, FONT & PRESET PILLS */}
-                            <div className="editorial-card p-4 sm:p-5">
-                                <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <Type className="w-4 h-4 text-[#C5A059]" />
-                                        <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-[#0E3E2B]">
-                                            4. PERSONALIZED DEDICATION
-                                        </h4>
-                                    </div>
-                                    <span className="text-[10px] font-mono text-[#83948C]">
-                                        {customCaption.length}/38 chars
-                                    </span>
-                                </div>
-
-                                <input
-                                    type="text"
-                                    maxLength={38}
-                                    value={customCaption}
-                                    onChange={(e) => setCustomCaption(e.target.value)}
-                                    placeholder="e.g. Best Friends Forever, Date Night 2026 💕"
-                                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#E8E3D5] text-xs sm:text-sm text-[#0E3E2B] bg-white focus:outline-none focus:border-[#0E3E2B] transition-colors placeholder:text-[#83948C] mb-2.5"
-                                />
-
-                                {/* Quick Presets Chips */}
-                                <div className="mb-3">
-                                    <span className="text-[10px] font-mono text-[#83948C] uppercase tracking-wider block mb-1.5">
-                                        Quick Slogan Presets (Tap to Apply):
-                                    </span>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {CAPTION_PRESETS.map((preset) => (
-                                            <button
-                                                key={preset}
-                                                onClick={() => setCustomCaption(preset)}
-                                                className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all ${
-                                                    customCaption === preset
-                                                        ? 'bg-[#0E3E2B] text-white border-[#0E3E2B]'
-                                                        : 'bg-white text-[#52635C] border-[#E8E3D5] hover:border-[#C5A059]'
-                                                }`}
-                                            >
-                                                {preset}
+                                                <span className="text-[10px] text-[#52635C] line-clamp-1">
+                                                    {f.description}
+                                                </span>
                                             </button>
                                         ))}
                                     </div>
                                 </div>
+                            )}
 
-                                {/* Font Selector */}
-                                <div>
-                                    <span className="text-[10px] font-mono text-[#83948C] uppercase tracking-wider block mb-1.5">
-                                        Caption Font Style:
-                                    </span>
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                        {[
-                                            { id: 'handwriting' as CaptionFont, label: 'Handwriting', font: 'font-cursive' },
-                                            { id: 'editorial' as CaptionFont, label: 'Serif Classic', font: 'font-serif-editorial' },
-                                            { id: 'modern' as CaptionFont, label: 'Modern Bold', font: 'font-sans font-bold' },
-                                            { id: 'typewriter' as CaptionFont, label: 'Typewriter', font: 'font-mono' },
-                                        ].map((f) => (
-                                            <button
-                                                key={f.id}
-                                                onClick={() => setCaptionFont(f.id)}
-                                                className={`py-2 px-2.5 rounded-xl border text-xs transition-all ${f.font} ${
-                                                    captionFont === f.id
-                                                        ? 'border-[#0E3E2B] bg-[#F4EFE6] text-[#0E3E2B] font-bold shadow-xs'
-                                                        : 'border-[#E8E3D5] bg-white text-[#52635C] hover:border-[#C5A059]'
-                                                }`}
-                                            >
-                                                {f.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* 5. FINISH & DATE STAMP */}
-                            <div className="editorial-card p-4 sm:p-5">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <Calendar className="w-4 h-4 text-[#C5A059]" />
-                                    <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-[#0E3E2B]">
-                                        5. CORNERS & DATE STAMP
-                                    </h4>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    {/* Corners */}
+                            {/* TAB 2: FRAME THEME & LAYOUT STYLE */}
+                            {activeStudioTab === 'frame' && (
+                                <div className="editorial-card p-4 sm:p-5 animate-fade-in space-y-4">
+                                    {/* Themes Grid */}
                                     <div>
-                                        <span className="text-[10px] font-mono text-[#83948C] uppercase tracking-wider block mb-1.5">
-                                            Photo Corners:
-                                        </span>
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={() => setCornerStyle('rounded')}
-                                                className={`flex-1 py-2 px-3 rounded-xl border text-xs font-medium transition-all ${
-                                                    cornerStyle === 'rounded'
-                                                        ? 'bg-[#0E3E2B] text-white border-[#0E3E2B]'
-                                                        : 'bg-white text-[#52635C] border-[#E8E3D5]'
-                                                }`}
-                                            >
-                                                Rounded (Modern)
-                                            </button>
-                                            <button
-                                                onClick={() => setCornerStyle('classic')}
-                                                className={`flex-1 py-2 px-3 rounded-xl border text-xs font-medium transition-all ${
-                                                    cornerStyle === 'classic'
-                                                        ? 'bg-[#0E3E2B] text-white border-[#0E3E2B]'
-                                                        : 'bg-white text-[#52635C] border-[#E8E3D5]'
-                                                }`}
-                                            >
-                                                Straight (Classic)
-                                            </button>
+                                        <div className="flex items-center justify-between mb-2.5">
+                                            <div className="flex items-center gap-2">
+                                                <Palette className="w-4 h-4 text-[#C5A059]" />
+                                                <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-[#0E3E2B]">
+                                                    FRAME THEME (12 COLORS)
+                                                </h4>
+                                            </div>
+                                            <span className="text-[11px] font-mono text-[#8C6D1F] font-bold">
+                                                {THEMES[selectedTheme].name}
+                                            </span>
+                                        </div>
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                            {(Object.keys(THEMES) as StripTheme[]).map((thm) => {
+                                                const themeCfg = THEMES[thm];
+                                                const isSelected = selectedTheme === thm;
+
+                                                return (
+                                                    <button
+                                                        key={thm}
+                                                        onClick={() => setSelectedTheme(thm)}
+                                                        className={`p-2.5 rounded-xl border text-left transition-all flex items-center gap-2 ${
+                                                            isSelected
+                                                                ? 'border-[#0E3E2B] bg-[#F4EFE6] shadow-xs'
+                                                                : 'border-[#E8E3D5] bg-white hover:border-[#C5A059]'
+                                                        }`}
+                                                    >
+                                                        <div
+                                                            className="w-4 h-4 rounded-full border border-black/15 flex-shrink-0"
+                                                            style={{ backgroundColor: themeCfg.bg }}
+                                                        />
+                                                        <span className="text-xs font-semibold text-[#0E3E2B] truncate">
+                                                            {themeCfg.name}
+                                                        </span>
+                                                    </button>
+                                                );
+                                            })}
                                         </div>
                                     </div>
 
-                                    {/* Date Stamp */}
-                                    <div>
-                                        <span className="text-[10px] font-mono text-[#83948C] uppercase tracking-wider block mb-1.5">
-                                            Date Display:
-                                        </span>
-                                        <div className="grid grid-cols-2 gap-1.5 text-xs font-mono">
-                                            {[
-                                                { id: 'standard' as DateStyle, label: 'Oct 7, 2026' },
-                                                { id: 'timestamp' as DateStyle, label: '2026.10.07' },
-                                                { id: 'season' as DateStyle, label: 'Autumn 2026' },
-                                                { id: 'hide' as DateStyle, label: 'Hide Date' },
-                                            ].map((d) => (
+                                    {/* Layout & Corners row */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#F4EFE6]">
+                                        {/* Layout */}
+                                        <div>
+                                            <span className="text-[10px] font-mono text-[#83948C] uppercase tracking-wider block mb-1.5">
+                                                Layout Format:
+                                            </span>
+                                            <div className="flex gap-2">
                                                 <button
-                                                    key={d.id}
-                                                    onClick={() => setDateStyle(d.id)}
-                                                    className={`py-1.5 px-2 rounded-lg border text-center transition-all ${
-                                                        dateStyle === d.id
-                                                            ? 'bg-[#0E3E2B] text-white border-[#0E3E2B] font-bold'
-                                                            : 'bg-white text-[#52635C] border-[#E8E3D5]'
+                                                    onClick={() => setSelectedLayout('strip')}
+                                                    className={`flex-1 p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                                                        selectedLayout === 'strip'
+                                                            ? 'border-[#0E3E2B] bg-[#F4EFE6] text-[#0E3E2B]'
+                                                            : 'border-[#E8E3D5] bg-white text-[#52635C]'
                                                     }`}
                                                 >
-                                                    {d.label}
+                                                    <Columns3 className="w-3.5 h-3.5 text-[#C5A059]" />
+                                                    <span>2x6 Strip</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => setSelectedLayout('grid')}
+                                                    className={`flex-1 p-2.5 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                                                        selectedLayout === 'grid'
+                                                            ? 'border-[#0E3E2B] bg-[#F4EFE6] text-[#0E3E2B]'
+                                                            : 'border-[#E8E3D5] bg-white text-[#52635C]'
+                                                    }`}
+                                                >
+                                                    <LayoutGrid className="w-3.5 h-3.5 text-[#C5A059]" />
+                                                    <span>2x2 Grid</span>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Corners */}
+                                        <div>
+                                            <span className="text-[10px] font-mono text-[#83948C] uppercase tracking-wider block mb-1.5">
+                                                Photo Corners:
+                                            </span>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => setCornerStyle('rounded')}
+                                                    className={`flex-1 p-2.5 rounded-xl border text-xs font-semibold transition-all ${
+                                                        cornerStyle === 'rounded'
+                                                            ? 'border-[#0E3E2B] bg-[#F4EFE6] text-[#0E3E2B]'
+                                                            : 'border-[#E8E3D5] bg-white text-[#52635C]'
+                                                    }`}
+                                                >
+                                                    Rounded
+                                                </button>
+                                                <button
+                                                    onClick={() => setCornerStyle('classic')}
+                                                    className={`flex-1 p-2.5 rounded-xl border text-xs font-semibold transition-all ${
+                                                        cornerStyle === 'classic'
+                                                            ? 'border-[#0E3E2B] bg-[#F4EFE6] text-[#0E3E2B]'
+                                                            : 'border-[#E8E3D5] bg-white text-[#52635C]'
+                                                    }`}
+                                                >
+                                                    Straight
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* TAB 3: PERSONALIZED DEDICATION & TYPOGRAPHY */}
+                            {activeStudioTab === 'caption' && (
+                                <div className="editorial-card p-4 sm:p-5 animate-fade-in space-y-3.5">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Type className="w-4 h-4 text-[#C5A059]" />
+                                            <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-[#0E3E2B]">
+                                                PERSONALIZED DEDICATION
+                                            </h4>
+                                        </div>
+                                        <span className="text-[10px] font-mono text-[#83948C]">
+                                            {customCaption.length}/38 chars
+                                        </span>
+                                    </div>
+
+                                    <input
+                                        type="text"
+                                        maxLength={38}
+                                        value={customCaption}
+                                        onChange={(e) => setCustomCaption(e.target.value)}
+                                        placeholder="e.g. Best Friends Forever, Date Night 2026 💕"
+                                        className="w-full px-3.5 py-2.5 rounded-xl border border-[#E8E3D5] text-xs sm:text-sm text-[#0E3E2B] bg-white focus:outline-none focus:border-[#0E3E2B] transition-colors placeholder:text-[#83948C]"
+                                    />
+
+                                    {/* Quick Presets */}
+                                    <div>
+                                        <span className="text-[10px] font-mono text-[#83948C] uppercase tracking-wider block mb-1.5">
+                                            Quick Slogan Presets:
+                                        </span>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {CAPTION_PRESETS.map((preset) => (
+                                                <button
+                                                    key={preset}
+                                                    onClick={() => setCustomCaption(preset)}
+                                                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium border transition-all ${
+                                                        customCaption === preset
+                                                            ? 'bg-[#0E3E2B] text-white border-[#0E3E2B]'
+                                                            : 'bg-white text-[#52635C] border-[#E8E3D5] hover:border-[#C5A059]'
+                                                    }`}
+                                                >
+                                                    {preset}
                                                 </button>
                                             ))}
                                         </div>
                                     </div>
-                                </div>
-                            </div>
 
-                            {/* 6. ECO SOUVENIR STAMP BADGES (9 Badges) */}
-                            <div className="editorial-card p-4 sm:p-5">
-                                <div className="flex items-center gap-2 mb-3">
-                                    <Tag className="w-4 h-4 text-[#C5A059]" />
-                                    <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-[#0E3E2B]">
-                                        6. ECO SOUVENIR STAMP
-                                    </h4>
-                                </div>
-                                <div className="grid grid-cols-3 sm:grid-cols-3 gap-2">
-                                    {(Object.keys(STICKER_CONFIG) as EcoSticker[]).map((stk) => {
-                                        const cfg = STICKER_CONFIG[stk];
-                                        const isSelected = selectedSticker === stk;
-                                        return (
-                                            <button
-                                                key={stk}
-                                                onClick={() => setSelectedSticker(stk)}
-                                                className={`p-2.5 rounded-xl text-xs font-medium border transition-all text-center flex flex-col items-center justify-center gap-0.5 ${
-                                                    isSelected
-                                                        ? 'bg-[#0E3E2B] text-white border-[#0E3E2B] shadow-xs font-semibold'
-                                                        : 'bg-white text-[#52635C] border-[#E8E3D5] hover:border-[#C5A059]'
-                                                }`}
-                                            >
-                                                {cfg.icon && <span className="text-base">{cfg.icon}</span>}
-                                                <span className="truncate">{cfg.label}</span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* 7. REVIEW & RETAKE POSES */}
-                            <div className="editorial-card p-4 sm:p-5">
-                                <div className="flex items-center justify-between mb-3">
-                                    <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-[#0E3E2B]">
-                                        7. REVIEW POSES
-                                    </h4>
-                                    <button
-                                        onClick={startBoothSequence}
-                                        className="text-xs font-mono text-[#8C6D1F] hover:text-[#0E3E2B] underline uppercase tracking-wider font-semibold"
-                                    >
-                                        Retake All 4 Shots
-                                    </button>
-                                </div>
-                                <div className="grid grid-cols-4 gap-2">
-                                    {capturedShots.map((shot, idx) => (
-                                        <div
-                                            key={idx}
-                                            className="relative group rounded-lg overflow-hidden border border-[#E8E3D5]"
-                                        >
-                                            <img
-                                                src={shot}
-                                                alt={`Pose ${idx + 1}`}
-                                                className="w-full h-14 sm:h-16 object-cover"
-                                                style={{ filter: currentFilterCss }}
-                                            />
-                                            <button
-                                                onClick={() => retakeSpecificShot(idx)}
-                                                className="absolute inset-0 bg-[#0E3E2B]/85 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-[9px] sm:text-[10px] text-white font-mono font-bold gap-1 p-1"
-                                            >
-                                                <RotateCcw className="w-3 h-3 text-[#D4AF37]" />
-                                                <span>RETAKE #{idx + 1}</span>
-                                            </button>
+                                    {/* Font & Date rows */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-[#F4EFE6]">
+                                        {/* Font Selector */}
+                                        <div>
+                                            <span className="text-[10px] font-mono text-[#83948C] uppercase tracking-wider block mb-1.5">
+                                                Font Style:
+                                            </span>
+                                            <div className="grid grid-cols-2 gap-1.5">
+                                                {[
+                                                    { id: 'handwriting' as CaptionFont, label: 'Handwriting', font: 'font-cursive' },
+                                                    { id: 'editorial' as CaptionFont, label: 'Serif Classic', font: 'font-serif-editorial' },
+                                                    { id: 'modern' as CaptionFont, label: 'Modern Bold', font: 'font-sans font-bold' },
+                                                    { id: 'typewriter' as CaptionFont, label: 'Typewriter', font: 'font-mono' },
+                                                ].map((f) => (
+                                                    <button
+                                                        key={f.id}
+                                                        onClick={() => setCaptionFont(f.id)}
+                                                        className={`py-1.5 px-2 rounded-lg border text-xs transition-all text-center ${f.font} ${
+                                                            captionFont === f.id
+                                                                ? 'border-[#0E3E2B] bg-[#F4EFE6] text-[#0E3E2B] font-bold'
+                                                                : 'border-[#E8E3D5] bg-white text-[#52635C]'
+                                                        }`}
+                                                    >
+                                                        {f.label}
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
-                                    ))}
+
+                                        {/* Date Stamp */}
+                                        <div>
+                                            <span className="text-[10px] font-mono text-[#83948C] uppercase tracking-wider block mb-1.5">
+                                                Date Format:
+                                            </span>
+                                            <div className="grid grid-cols-2 gap-1.5 text-xs font-mono">
+                                                {[
+                                                    { id: 'standard' as DateStyle, label: 'Standard' },
+                                                    { id: 'timestamp' as DateStyle, label: '2026.10.07' },
+                                                    { id: 'season' as DateStyle, label: 'Season' },
+                                                    { id: 'hide' as DateStyle, label: 'Hide Date' },
+                                                ].map((d) => (
+                                                    <button
+                                                        key={d.id}
+                                                        onClick={() => setDateStyle(d.id)}
+                                                        className={`py-1.5 px-2 rounded-lg border text-center transition-all ${
+                                                            dateStyle === d.id
+                                                                ? 'bg-[#0E3E2B] text-white border-[#0E3E2B] font-bold'
+                                                                : 'bg-white text-[#52635C] border-[#E8E3D5]'
+                                                        }`}
+                                                    >
+                                                        {d.label}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
+
+                            {/* TAB 4: ECO SOUVENIR STAMPS */}
+                            {activeStudioTab === 'stamps' && (
+                                <div className="editorial-card p-4 sm:p-5 animate-fade-in">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <Tag className="w-4 h-4 text-[#C5A059]" />
+                                        <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-[#0E3E2B]">
+                                            ECO SOUVENIR STAMP BADGES
+                                        </h4>
+                                    </div>
+                                    <div className="grid grid-cols-3 sm:grid-cols-3 gap-2">
+                                        {(Object.keys(STICKER_CONFIG) as EcoSticker[]).map((stk) => {
+                                            const cfg = STICKER_CONFIG[stk];
+                                            const isSelected = selectedSticker === stk;
+                                            return (
+                                                <button
+                                                    key={stk}
+                                                    onClick={() => setSelectedSticker(stk)}
+                                                    className={`p-2.5 rounded-xl text-xs font-medium border transition-all text-center flex flex-col items-center justify-center gap-0.5 ${
+                                                        isSelected
+                                                            ? 'bg-[#0E3E2B] text-white border-[#0E3E2B] shadow-xs font-semibold'
+                                                            : 'bg-white text-[#52635C] border-[#E8E3D5] hover:border-[#C5A059]'
+                                                    }`}
+                                                >
+                                                    {cfg.icon && <span className="text-base">{cfg.icon}</span>}
+                                                    <span className="truncate">{cfg.label}</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* TAB 5: REVIEW & RETAKE POSES */}
+                            {activeStudioTab === 'poses' && (
+                                <div className="editorial-card p-4 sm:p-5 animate-fade-in">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center gap-2">
+                                            <Camera className="w-4 h-4 text-[#C5A059]" />
+                                            <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-[#0E3E2B]">
+                                                REVIEW CAPTURED POSES
+                                            </h4>
+                                        </div>
+                                        <button
+                                            onClick={startBoothSequence}
+                                            className="text-xs font-mono text-[#8C6D1F] hover:text-[#0E3E2B] underline uppercase tracking-wider font-semibold"
+                                        >
+                                            Retake All Shots
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        {capturedShots.map((shot, idx) => (
+                                            <div
+                                                key={idx}
+                                                className="relative group rounded-lg overflow-hidden border border-[#E8E3D5]"
+                                            >
+                                                <img
+                                                    src={shot}
+                                                    alt={`Pose ${idx + 1}`}
+                                                    className="w-full h-16 sm:h-20 object-cover"
+                                                    style={{ filter: currentFilterCss }}
+                                                />
+                                                <button
+                                                    onClick={() => retakeSpecificShot(idx)}
+                                                    className="absolute inset-0 bg-[#0E3E2B]/85 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-[9px] sm:text-[10px] text-white font-mono font-bold gap-1 p-1"
+                                                >
+                                                    <RotateCcw className="w-3.5 h-3.5 text-[#D4AF37]" />
+                                                    <span>RETAKE #{idx + 1}</span>
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    {/* PINNED BOTTOM ACTION CTA BAR FOR MOBILE & DESKTOP */}
-                    <div className="fixed sm:static bottom-0 inset-x-0 z-30 bg-[#FAF8F5]/95 sm:bg-transparent backdrop-blur-md sm:backdrop-blur-none border-t sm:border-0 border-[#E8E3D5] p-3 sm:p-0 sm:mt-6 w-full max-w-5xl">
+                    {/* DOCKED BOTTOM ACTION CTA BAR */}
+                    <div className="fixed sm:static bottom-0 inset-x-0 z-30 bg-[#FAF8F5]/95 sm:bg-transparent backdrop-blur-md sm:backdrop-blur-none border-t sm:border-0 border-[#E8E3D5] p-3 sm:p-0 sm:mt-5 w-full max-w-5xl">
                         {error && (
                             <div className="flex items-start gap-2 mb-2 px-3 py-2 rounded-xl bg-[#FBF3DC] border border-[#E5D6A8] text-[#8C6D1F]">
                                 <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />

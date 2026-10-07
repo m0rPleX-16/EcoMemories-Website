@@ -594,13 +594,38 @@ export async function generatePhotostrip(
 
         // Top Header
         ctx.fillStyle = theme.accentColor;
-        ctx.font = 'bold 24px "Outfit", sans-serif';
+        ctx.font = 'bold 24px "Outfit", -apple-system, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('ECOMEMORIES', width / 2, 52);
 
-        // Personalized slogan / custom caption
+        // Personalized slogan / custom caption with auto-fit font
         ctx.fillStyle = theme.subTextColor;
-        ctx.font = getCaptionFont(false);
+        let baseSize = 23;
+        let fontStack = '"Dancing Script", "Caveat", cursive';
+        let isItalic = '';
+        let isBold = '';
+
+        if (fontChoice === 'editorial') {
+            baseSize = 20;
+            fontStack = '"Playfair Display", Georgia, serif';
+            isItalic = 'italic ';
+            isBold = '600 ';
+        } else if (fontChoice === 'modern') {
+            baseSize = 18;
+            fontStack = '"Outfit", -apple-system, sans-serif';
+            isBold = 'bold ';
+        } else if (fontChoice === 'typewriter') {
+            baseSize = 16;
+            fontStack = '"JetBrains Mono", Courier, monospace';
+        }
+
+        let currSize = baseSize;
+        ctx.font = `${isItalic}${isBold}${currSize}px ${fontStack}`;
+        const maxHeaderW = width - padX * 2 - 20;
+        while (ctx.measureText(slogan).width > maxHeaderW && currSize > 12) {
+            currSize -= 1;
+            ctx.font = `${isItalic}${isBold}${currSize}px ${fontStack}`;
+        }
         ctx.fillText(slogan, width / 2, 88);
 
         // Draw 4 photos
@@ -679,13 +704,38 @@ export async function generatePhotostrip(
 
         // Header
         ctx.fillStyle = theme.accentColor;
-        ctx.font = 'bold 40px "Outfit", sans-serif';
+        ctx.font = 'bold 40px "Outfit", -apple-system, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('ECOMEMORIES', width / 2, 68);
 
-        // Personalized subtitle / custom caption
+        // Personalized subtitle / custom caption with auto-fit
         ctx.fillStyle = theme.subTextColor;
-        ctx.font = getCaptionFont(true);
+        let gridBaseSize = 32;
+        let gridFontStack = '"Dancing Script", "Caveat", cursive';
+        let gridItalic = '';
+        let gridBold = '';
+
+        if (fontChoice === 'editorial') {
+            gridBaseSize = 28;
+            gridFontStack = '"Playfair Display", Georgia, serif';
+            gridItalic = 'italic ';
+            gridBold = '600 ';
+        } else if (fontChoice === 'modern') {
+            gridBaseSize = 26;
+            gridFontStack = '"Outfit", -apple-system, sans-serif';
+            gridBold = 'bold ';
+        } else if (fontChoice === 'typewriter') {
+            gridBaseSize = 24;
+            gridFontStack = '"JetBrains Mono", Courier, monospace';
+        }
+
+        let currGridSize = gridBaseSize;
+        ctx.font = `${gridItalic}${gridBold}${currGridSize}px ${gridFontStack}`;
+        const maxGridHeaderW = width - pad * 2 - 40;
+        while (ctx.measureText(slogan).width > maxGridHeaderW && currGridSize > 16) {
+            currGridSize -= 1;
+            ctx.font = `${gridItalic}${gridBold}${currGridSize}px ${gridFontStack}`;
+        }
         ctx.fillText(slogan, width / 2, 114);
 
         const availableW = width - pad * 2 - gap;
