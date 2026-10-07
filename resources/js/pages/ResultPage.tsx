@@ -270,12 +270,9 @@ export default function ResultPage() {
                                 />
                             )}
 
-                            {/* Floating Hover Indicator */}
-                            <div className="absolute bottom-2.5 inset-x-2.5 flex items-center justify-center opacity-90 group-hover:opacity-100 transition-opacity">
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0E3E2B]/85 backdrop-blur-xs text-white text-[10px] font-mono tracking-wider uppercase font-semibold shadow-md">
-                                    <ZoomIn className="w-3 h-3 text-[#D4AF37]" />
-                                    <span>Tap to Zoom</span>
-                                </span>
+                            {/* Subtle Top-Right Expand Icon on Hover */}
+                            <div className="absolute top-2.5 right-2.5 p-1.5 rounded-full bg-black/40 text-white backdrop-blur-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                <ZoomIn className="w-3.5 h-3.5 text-white" />
                             </div>
                         </div>
 
