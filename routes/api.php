@@ -24,6 +24,29 @@ Route::middleware('throttle:60,1')->group(function () {
         \Illuminate\Support\Facades\Log::info("[ESP32] Device auto-registered at IP: {$ip}");
         return response()->json(['success' => true, 'registered_ip' => $ip]);
     });
+    Route::get('/devices/active-session', function () {
+        $session = \App\Models\Session::where('status', \App\Models\Session::STATUS_ACTIVE)
+            ->where('expires_at', '>', now())
+            ->latest()
+            ->first();
+
+        if ($session && $session->validDepositsCount() < 5) {
+            return response()->json([
+                'active' => true,
+                'session_code' => $session->session_code,
+                'deposits' => $session->validDepositsCount(),
+                'required' => 5,
+            ]);
+        }
+
+        return response()->json([
+            'active' => false,
+            'session_code' => '',
+            'deposits' => 0,
+            'required' => 5,
+        ]);
+    });
+
     Route::get('/devices/bridge-status', function () {
         $ip = cache()->get('esp32_bridge_ip') ?? env('VITE_BRIDGE_URL');
         $url = $ip ? (str_starts_with($ip, 'http') ? $ip : "http://{$ip}:3333") : 'http://localhost:3333';
